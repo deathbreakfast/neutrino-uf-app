@@ -184,7 +184,7 @@ test.describe("pw-vault-authz", () => {
   });
 
   test("pw-vault-step-up-required-sad", async ({ page }) => {
-    await seedAuth(page, "admin", { grant_step_up_window: false });
+    await seedAuth(page, "admin", { step_up_window: "none" });
     await page.goto("/secrets", { waitUntil: "domcontentloaded" });
     await waitForHydrated(page);
     await expect(page.getByTestId("neutrino-secrets-list-page")).toBeVisible({
@@ -206,6 +206,86 @@ test.describe("pw-vault-authz", () => {
     await page.getByTestId("neutrino-create-submit").click();
     await expectMutationDenied(page);
     await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toHaveCount(0);
+  });
+
+  test("pw-vault-step-up-expired-sad", async ({ page }) => {
+    await seedAuth(page, "admin", { step_up_window: "expired" });
+    await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+    await waitForHydrated(page);
+    await expect(page.getByTestId("neutrino-secrets-list-page")).toBeVisible({
+      timeout: 60_000,
+    });
+
+    const name = `e2e-expired-${Date.now()}`;
+    await page.getByTestId("neutrino-create-secret-btn").click();
+    await page.getByTestId("neutrino-create-name").locator("input").fill(name);
+    await page
+      .getByTestId("neutrino-create-scope")
+      .locator("input")
+      .fill("/e2e/expired");
+    await page.getByTestId("neutrino-create-kind").locator("input").fill("token");
+    await page
+      .getByTestId("neutrino-create-plaintext")
+      .locator("input")
+      .fill("blocked");
+    await page.getByTestId("neutrino-create-submit").click();
+    await expectMutationDenied(page);
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toHaveCount(0);
+  });
+
+  test("pw-vault-list-without-step-up-happy", async ({ page }) => {
+    const seeded = await seedAuth(page, "admin", { step_up_window: "none" });
+    const name = seeded.fixtures.admin_secret_name;
+    await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+    await waitForHydrated(page);
+    await expect(page.getByTestId("neutrino-secrets-list-page")).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible({
+      timeout: 60_000,
+    });
+  });
+
+  test("pw-vault-rotate-delete-without-step-up-sad", async ({ page }) => {
+    const seeded = await seedAuth(page, "admin", { step_up_window: "none" });
+    const name = seeded.fixtures.admin_secret_name;
+    await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+    await waitForHydrated(page);
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible({
+      timeout: 60_000,
+    });
+
+    await clickSecretAction(page, name, "Rotate");
+    await page.getByLabel("New plaintext").fill("should-fail");
+    await page.getByTestId("neutrino-rotate-submit").click();
+    await expectMutationDenied(page);
+    await expect(page.getByTestId(`neutrino-secret-version-${name}`)).toHaveText("1");
+
+    await clickSecretAction(page, name, "Delete");
+    await page.getByTestId("neutrino-delete-confirm").click();
+    await expectMutationDenied(page);
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible();
+  });
+
+  test("pw-vault-reveal-fresh-without-window-happy", async ({ page }) => {
+    // Fresh reveal ignores the sudo window (TM-3 / TM-12); e2e-lab supplies a code.
+    const seeded = await seedAuth(page, "admin", { step_up_window: "none" });
+    const name = seeded.fixtures.admin_secret_name;
+    await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+    await waitForHydrated(page);
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible({
+      timeout: 60_000,
+    });
+
+    await clickSecretAction(page, name, "Reveal");
+    await expect(page.getByTestId("neutrino-reveal-secret-dialog")).toBeVisible({
+      timeout: 60_000,
+    });
+    await expect(page.getByTestId("neutrino-reveal-plaintext").locator("input")).toHaveValue(
+      Buffer.from("admin-seed-pt").toString("base64"),
+      { timeout: 60_000 },
+    );
+    await page.getByTestId("neutrino-reveal-close").click();
   });
 });
 

@@ -13,17 +13,49 @@ pub struct SeedRequest {
     /// `anonymous` | `admin` | `operator`/`requestor` | `outsider` | `unverified`
     #[serde(default = "default_auth")]
     pub auth: String,
-    /// When true (default for authenticated seeds), open a TOTP sudo window.
-    #[serde(default = "default_grant_step_up")]
+    /// When true (default for authenticated seeds), open a valid TOTP sudo window.
+    /// Prefer [`Self::step_up_window`] when you need `expired`.
+    #[serde(default)]
     pub grant_step_up_window: Option<bool>,
+    /// `valid` | `expired` | `none` — overrides [`Self::grant_step_up_window`] when set.
+    #[serde(default)]
+    pub step_up_window: Option<String>,
 }
 
 fn default_auth() -> String {
     E2eAuthKind::Anonymous.as_str().to_string()
 }
 
-fn default_grant_step_up() -> Option<bool> {
-    None
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StepUpWindowKind {
+    None,
+    Valid,
+    Expired,
+}
+
+fn resolve_window_kind(body: &SeedRequest, kind: E2eAuthKind) -> StepUpWindowKind {
+    if let Some(raw) = body.step_up_window.as_deref() {
+        return match raw.trim() {
+            "valid" | "ok" | "true" => StepUpWindowKind::Valid,
+            "expired" => StepUpWindowKind::Expired,
+            "none" | "false" | "" => StepUpWindowKind::None,
+            _ => StepUpWindowKind::None,
+        };
+    }
+    match body.grant_step_up_window {
+        Some(true) => StepUpWindowKind::Valid,
+        Some(false) => StepUpWindowKind::None,
+        None => {
+            if matches!(
+                kind,
+                E2eAuthKind::Admin | E2eAuthKind::Requestor | E2eAuthKind::Outsider
+            ) {
+                StepUpWindowKind::Valid
+            } else {
+                StepUpWindowKind::None
+            }
+        }
+    }
 }
 
 async fn clear_step_up_window(session: &tower_sessions::Session) {
@@ -47,20 +79,32 @@ async fn clear_step_up_window(session: &tower_sessions::Session) {
 async fn write_step_up_window(
     session: &tower_sessions::Session,
     session_user_id: &str,
+    kind: StepUpWindowKind,
 ) -> Result<(), StatusCode> {
     let now = Utc::now();
-    let expires = now + chrono::Duration::seconds(uf_product::permissions::STEP_UP_TTL_SECS);
+    let (verified_at, expires_at) = match kind {
+        StepUpWindowKind::None => return Ok(()),
+        StepUpWindowKind::Valid => (
+            now,
+            now + chrono::Duration::seconds(uf_product::permissions::STEP_UP_TTL_SECS),
+        ),
+        StepUpWindowKind::Expired => {
+            let expired =
+                now - chrono::Duration::seconds(uf_product::permissions::STEP_UP_TTL_SECS + 30);
+            (expired, expired)
+        }
+    };
     session
         .insert(
             uf_product::permissions::STEP_UP_VERIFIED_AT_KEY,
-            now.timestamp(),
+            verified_at.timestamp(),
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     session
         .insert(
             uf_product::permissions::STEP_UP_EXPIRES_AT_KEY,
-            expires.timestamp(),
+            expires_at.timestamp(),
         )
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -99,15 +143,16 @@ pub async fn seed_data(
 
     clear_step_up_window(&session).await;
 
-    let grant_window = body.grant_step_up_window.unwrap_or(matches!(
-        kind,
-        E2eAuthKind::Admin | E2eAuthKind::Requestor | E2eAuthKind::Outsider
-    ));
-    let mut step_up_window = false;
-    if grant_window {
+    let window_kind = resolve_window_kind(&body, kind);
+    let mut step_up_window = "none";
+    if window_kind != StepUpWindowKind::None {
         if let Some(uid) = kind.session_user_id() {
-            write_step_up_window(&session, uid).await?;
-            step_up_window = true;
+            write_step_up_window(&session, uid, window_kind).await?;
+            step_up_window = match window_kind {
+                StepUpWindowKind::Valid => "valid",
+                StepUpWindowKind::Expired => "expired",
+                StepUpWindowKind::None => "none",
+            };
         }
     }
 

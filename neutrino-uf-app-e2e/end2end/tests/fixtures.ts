@@ -191,7 +191,12 @@ const NEUTRINO_HELP_STEPS_SEEN = [
 export async function seedAuth(
   page: Page,
   auth: SeedAuthKind,
-  opts?: { help_tour?: boolean; grant_step_up_window?: boolean },
+  opts?: {
+    help_tour?: boolean;
+    grant_step_up_window?: boolean;
+    /** `valid` | `expired` | `none` — overrides grant_step_up_window when set. */
+    step_up_window?: "valid" | "expired" | "none";
+  },
 ) {
   const helpTour = opts?.help_tour ?? false;
   await page.addInitScript(
@@ -213,7 +218,9 @@ export async function seedAuth(
   );
 
   const data: Record<string, unknown> = { auth };
-  if (opts?.grant_step_up_window !== undefined) {
+  if (opts?.step_up_window !== undefined) {
+    data.step_up_window = opts.step_up_window;
+  } else if (opts?.grant_step_up_window !== undefined) {
     data.grant_step_up_window = opts.grant_step_up_window;
   }
   const res = await page.request.post("/api/test/seed-data", {
@@ -223,7 +230,7 @@ export async function seedAuth(
   return res.json() as Promise<{
     ok: boolean;
     auth: string;
-    step_up_window?: boolean;
+    step_up_window?: boolean | string;
     totp_secret?: string;
     fixtures: SeedFixtures;
   }>;
