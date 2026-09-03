@@ -194,8 +194,12 @@ export async function seedAuth(
   opts?: {
     help_tour?: boolean;
     grant_step_up_window?: boolean;
-    /** `valid` | `expired` | `none` — overrides grant_step_up_window when set. */
-    step_up_window?: "valid" | "expired" | "none";
+    /** `valid` | `expired` | `none` | `other_user` — overrides grant_step_up_window when set. */
+    step_up_window?: "valid" | "expired" | "none" | "other_user";
+    /** Lab-only: `auto` (default) | `empty` — fresh TOTP supply for reveal. */
+    fresh_totp?: "auto" | "empty";
+    /** Put admin back on Super User for break-glass reveal. */
+    promote_super_user?: boolean;
   },
 ) {
   const helpTour = opts?.help_tour ?? false;
@@ -222,6 +226,12 @@ export async function seedAuth(
     data.step_up_window = opts.step_up_window;
   } else if (opts?.grant_step_up_window !== undefined) {
     data.grant_step_up_window = opts.grant_step_up_window;
+  }
+  if (opts?.fresh_totp !== undefined) {
+    data.fresh_totp = opts.fresh_totp;
+  }
+  if (opts?.promote_super_user !== undefined) {
+    data.promote_super_user = opts.promote_super_user;
   }
   const res = await page.request.post("/api/test/seed-data", {
     data,

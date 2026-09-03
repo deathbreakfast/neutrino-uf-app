@@ -17,9 +17,16 @@ pub struct SeedRequest {
     /// Prefer [`Self::step_up_window`] when you need `expired`.
     #[serde(default)]
     pub grant_step_up_window: Option<bool>,
-    /// `valid` | `expired` | `none` — overrides [`Self::grant_step_up_window`] when set.
+    /// `valid` | `expired` | `none` | `other_user` — overrides [`Self::grant_step_up_window`] when set.
+    /// `other_user` writes a time-valid window bound to a different user than the session (TM-3).
     #[serde(default)]
     pub step_up_window: Option<String>,
+    /// Lab-only: `auto` (default) | `empty` — controls fresh-TOTP supply for reveal.
+    #[serde(default)]
+    pub fresh_totp: Option<String>,
+    /// When true, put admin back on Super User so break-glass reveal can succeed.
+    #[serde(default)]
+    pub promote_super_user: Option<bool>,
 }
 
 fn default_auth() -> String {
@@ -31,6 +38,8 @@ enum StepUpWindowKind {
     None,
     Valid,
     Expired,
+    /// Time-valid window whose `STEP_UP_USER_ID_KEY` does not match the session user.
+    OtherUser,
 }
 
 fn resolve_window_kind(body: &SeedRequest, kind: E2eAuthKind) -> StepUpWindowKind {
@@ -38,6 +47,7 @@ fn resolve_window_kind(body: &SeedRequest, kind: E2eAuthKind) -> StepUpWindowKin
         return match raw.trim() {
             "valid" | "ok" | "true" => StepUpWindowKind::Valid,
             "expired" => StepUpWindowKind::Expired,
+            "other_user" => StepUpWindowKind::OtherUser,
             "none" | "false" | "" => StepUpWindowKind::None,
             _ => StepUpWindowKind::None,
         };
@@ -55,6 +65,19 @@ fn resolve_window_kind(body: &SeedRequest, kind: E2eAuthKind) -> StepUpWindowKin
                 StepUpWindowKind::None
             }
         }
+    }
+}
+
+fn bound_user_for_window(kind: StepUpWindowKind, session_user_id: &str) -> String {
+    match kind {
+        StepUpWindowKind::OtherUser => {
+            if session_user_id == "admin" {
+                "requestor".to_string()
+            } else {
+                "admin".to_string()
+            }
+        }
+        _ => session_user_id.to_string(),
     }
 }
 
@@ -84,7 +107,7 @@ async fn write_step_up_window(
     let now = Utc::now();
     let (verified_at, expires_at) = match kind {
         StepUpWindowKind::None => return Ok(()),
-        StepUpWindowKind::Valid => (
+        StepUpWindowKind::Valid | StepUpWindowKind::OtherUser => (
             now,
             now + chrono::Duration::seconds(uf_product::permissions::STEP_UP_TTL_SECS),
         ),
@@ -94,6 +117,7 @@ async fn write_step_up_window(
             (expired, expired)
         }
     };
+    let bound_user = bound_user_for_window(kind, session_user_id);
     session
         .insert(
             uf_product::permissions::STEP_UP_VERIFIED_AT_KEY,
@@ -109,10 +133,7 @@ async fn write_step_up_window(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     session
-        .insert(
-            uf_product::permissions::STEP_UP_USER_ID_KEY,
-            session_user_id.to_string(),
-        )
+        .insert(uf_product::permissions::STEP_UP_USER_ID_KEY, bound_user)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     session
@@ -151,9 +172,21 @@ pub async fn seed_data(
             step_up_window = match window_kind {
                 StepUpWindowKind::Valid => "valid",
                 StepUpWindowKind::Expired => "expired",
+                StepUpWindowKind::OtherUser => "other_user",
                 StepUpWindowKind::None => "none",
             };
         }
+    }
+
+    let fresh_totp = match body.fresh_totp.as_deref().map(str::trim) {
+        Some("empty") => "empty",
+        _ => "auto",
+    };
+    neutrino_app::e2e_lab::set_fresh_totp_mode(Some(fresh_totp));
+
+    if body.promote_super_user == Some(true) {
+        let system = crate::e2e_valence::e2e_system_valence();
+        crate::e2e_valence::promote_admin_to_super_user(&system).await;
     }
 
     let fixtures = e2e_fixtures();
@@ -162,6 +195,8 @@ pub async fn seed_data(
         "ok": true,
         "auth": kind.as_str(),
         "step_up_window": step_up_window,
+        "fresh_totp": fresh_totp,
+        "promote_super_user": body.promote_super_user.unwrap_or(false),
         "totp_secret": HARNESS_TOTP_SECRET,
         "fixtures": {
             "outsider_secret_id": fixtures.outsider_secret_id,

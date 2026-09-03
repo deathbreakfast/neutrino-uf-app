@@ -191,6 +191,11 @@ async fn demote_admin_from_super_user(system: &Valence) {
     let _ = super_group.unrelate_from_owner_record(&pid, system).await;
 }
 
+/// Lab seed: put admin back on Super User (break-glass reveal paths).
+pub async fn promote_admin_to_super_user(system: &Valence) {
+    seed_super_user_with_member(system, "admin").await;
+}
+
 fn secrets_manifest() -> PermissionManifestInput {
     PermissionManifestInput {
         app_id: "secrets".into(),
