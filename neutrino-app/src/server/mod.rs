@@ -246,7 +246,7 @@ pub async fn list_vault_secrets() -> Result<Vec<VaultSecretRow>, ServerFnError> 
 }
 
 /// Creates a new secret (version 1).
-#[uf_product_macros::server(permission = "SecretsWrite")]
+#[uf_product_macros::server(permission = "SecretsWrite", step_up)]
 pub async fn create_vault_secret(
     /// Human-readable secret name.
     name: String,
@@ -267,11 +267,23 @@ pub async fn create_vault_secret(
 }
 
 /// Returns the current version plaintext (base64). Never persisted client-side.
-#[uf_product_macros::server(permission = "SecretsReveal")]
+#[uf_product_macros::server(permission = "SecretsReveal", step_up = "fresh")]
 pub async fn reveal_vault_secret(
     /// Unique identifier of the secret to reveal.
     id: String,
+    /// Fresh TOTP code required for reveal (including Super User break-glass).
+    totp_code: String,
 ) -> Result<RevealedVaultSecret, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        lepton_auth::verify_fresh_totp(&totp_code)
+            .await
+            .map_err(|e| e.to_server_fn_error())?;
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let _ = totp_code;
+    }
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
     let access = vault_access_from_ctx(&ctx).await?;
@@ -282,7 +294,7 @@ pub async fn reveal_vault_secret(
 }
 
 /// Deletes a secret and all versions (hard delete with prior audit event in Neutrino).
-#[uf_product_macros::server(permission = "SecretsWrite")]
+#[uf_product_macros::server(permission = "SecretsWrite", step_up)]
 pub async fn delete_vault_secret(
     /// Unique identifier of the secret to delete.
     id: String,
@@ -297,7 +309,7 @@ pub async fn delete_vault_secret(
 }
 
 /// Rotates ciphertext to a new version (Photon / Gluon bootstrap publish is deferred).
-#[uf_product_macros::server(permission = "SecretsRotate")]
+#[uf_product_macros::server(permission = "SecretsRotate", step_up)]
 pub async fn rotate_vault_secret(
     /// Unique identifier of the secret to rotate.
     id: String,

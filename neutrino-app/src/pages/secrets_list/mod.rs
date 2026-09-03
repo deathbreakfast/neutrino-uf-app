@@ -5,7 +5,6 @@ mod table;
 
 use dialogs::{CreateSecretDialog, DeleteSecretDialog, RevealSecretDialog, RotateSecretDialog};
 use leptos::prelude::*;
-use leptos::task::spawn_local_scoped;
 use table::SecretsTable;
 use uf_product::components::{Caption1, ContentContainer, SpacingSize, Title3};
 use uf_product::primitives::{Button, ButtonAppearance, Flex, FlexAlign, FlexJustify};
@@ -14,6 +13,7 @@ use uf_product::services::permission_server_errors::{
 };
 
 use crate::help_steps::SecretsTourDialogs;
+use crate::pages::step_up::{spawn_with_fresh_totp, spawn_with_step_up};
 use crate::server::{
     create_vault_secret, delete_vault_secret, list_vault_secrets, reveal_vault_secret,
     rotate_vault_secret, VaultSecretRow,
@@ -74,22 +74,35 @@ pub fn SecretsListPage() -> impl IntoView {
         let plaintext = new_plaintext.get_untracked();
         create_error.set(None);
         create_submitting.set(true);
-        spawn_local_scoped(async move {
-            match create_vault_secret(name, scope_path, kind, plaintext).await {
-                Ok(_) => {
-                    create_submitting.set(false);
-                    create_open.set(false);
-                    new_plaintext.set(String::new());
-                    refresh_trigger.update(|n| *n += 1);
+        let create_error = create_error;
+        let create_submitting = create_submitting;
+        let create_open = create_open;
+        let new_plaintext = new_plaintext;
+        let refresh_trigger = refresh_trigger;
+        let permission_toast_bus = permission_toast_bus;
+        spawn_with_step_up(
+            create_error,
+            Callback::new(move |_| {
+                create_submitting.set(false);
+                create_open.set(false);
+                new_plaintext.set(String::new());
+                refresh_trigger.update(|n| *n += 1);
+            }),
+            move || {
+                let name = name.clone();
+                let scope_path = scope_path.clone();
+                let kind = kind.clone();
+                let plaintext = plaintext.clone();
+                async move {
+                    let result = create_vault_secret(name, scope_path, kind, plaintext).await;
+                    if let Err(err) = &result {
+                        create_submitting.set(false);
+                        let _ = report_server_fn_error_with_bus(permission_toast_bus, err);
+                    }
+                    result
                 }
-                Err(err) => {
-                    create_submitting.set(false);
-                    // Toast bus may be a no-op stub in this shell; always surface in-dialog.
-                    let _ = report_server_fn_error_with_bus(permission_toast_bus, &err);
-                    create_error.set(Some(err.to_string()));
-                }
-            }
-        });
+            },
+        );
     };
 
     let on_close_reveal = move |_| {
@@ -108,22 +121,35 @@ pub fn SecretsListPage() -> impl IntoView {
         let pt = rotate_plaintext.get_untracked();
         rotate_error.set(None);
         rotate_submitting.set(true);
-        spawn_local_scoped(async move {
-            match rotate_vault_secret(target.id.clone(), pt).await {
-                Ok(_) => {
-                    rotate_submitting.set(false);
-                    rotate_open.set(false);
-                    rotate_target.set(None);
-                    rotate_plaintext.set(String::new());
-                    refresh_trigger.update(|n| *n += 1);
+        let rotate_error = rotate_error;
+        let rotate_submitting = rotate_submitting;
+        let rotate_open = rotate_open;
+        let rotate_target = rotate_target;
+        let rotate_plaintext = rotate_plaintext;
+        let refresh_trigger = refresh_trigger;
+        let permission_toast_bus = permission_toast_bus;
+        spawn_with_step_up(
+            rotate_error,
+            Callback::new(move |_| {
+                rotate_submitting.set(false);
+                rotate_open.set(false);
+                rotate_target.set(None);
+                rotate_plaintext.set(String::new());
+                refresh_trigger.update(|n| *n += 1);
+            }),
+            move || {
+                let id = target.id.clone();
+                let pt = pt.clone();
+                async move {
+                    let result = rotate_vault_secret(id, pt).await;
+                    if let Err(err) = &result {
+                        rotate_submitting.set(false);
+                        let _ = report_server_fn_error_with_bus(permission_toast_bus, err);
+                    }
+                    result
                 }
-                Err(err) => {
-                    rotate_submitting.set(false);
-                    let _ = report_server_fn_error_with_bus(permission_toast_bus, &err);
-                    rotate_error.set(Some(err.to_string()));
-                }
-            }
-        });
+            },
+        );
     };
 
     let on_confirm_delete = move |_| {
@@ -132,21 +158,32 @@ pub fn SecretsListPage() -> impl IntoView {
         };
         delete_error.set(None);
         delete_submitting.set(true);
-        spawn_local_scoped(async move {
-            match delete_vault_secret(target.id.clone()).await {
-                Ok(()) => {
-                    delete_submitting.set(false);
-                    delete_open.set(false);
-                    delete_target.set(None);
-                    refresh_trigger.update(|n| *n += 1);
+        let delete_error = delete_error;
+        let delete_submitting = delete_submitting;
+        let delete_open = delete_open;
+        let delete_target = delete_target;
+        let refresh_trigger = refresh_trigger;
+        let permission_toast_bus = permission_toast_bus;
+        spawn_with_step_up(
+            delete_error,
+            Callback::new(move |()| {
+                delete_submitting.set(false);
+                delete_open.set(false);
+                delete_target.set(None);
+                refresh_trigger.update(|n| *n += 1);
+            }),
+            move || {
+                let id = target.id.clone();
+                async move {
+                    let result = delete_vault_secret(id).await;
+                    if let Err(err) = &result {
+                        delete_submitting.set(false);
+                        let _ = report_server_fn_error_with_bus(permission_toast_bus, err);
+                    }
+                    result
                 }
-                Err(err) => {
-                    delete_submitting.set(false);
-                    let _ = report_server_fn_error_with_bus(permission_toast_bus, &err);
-                    delete_error.set(Some(err.to_string()));
-                }
-            }
-        });
+            },
+        );
     };
 
     let on_reveal_row = Callback::new(move |row: VaultSecretRow| {
@@ -154,20 +191,30 @@ pub fn SecretsListPage() -> impl IntoView {
         reveal_b64.set(String::new());
         reveal_error.set(None);
         reveal_open.set(true);
-        reveal_loading.set(true);
-        spawn_local_scoped(async move {
-            match reveal_vault_secret(row.id.clone()).await {
-                Ok(mut p) => {
-                    reveal_loading.set(false);
-                    reveal_b64.set(std::mem::take(&mut p.plaintext_b64));
+        reveal_loading.set(false);
+        let reveal_error = reveal_error;
+        let reveal_loading = reveal_loading;
+        let reveal_b64 = reveal_b64;
+        let permission_toast_bus = permission_toast_bus;
+        spawn_with_fresh_totp(
+            reveal_error,
+            Callback::new(move |mut p: crate::server::RevealedVaultSecret| {
+                reveal_loading.set(false);
+                reveal_b64.set(std::mem::take(&mut p.plaintext_b64));
+            }),
+            move |totp_code| {
+                reveal_loading.set(true);
+                let id = row.id.clone();
+                async move {
+                    let result = reveal_vault_secret(id, totp_code).await;
+                    if let Err(err) = &result {
+                        reveal_loading.set(false);
+                        let _ = report_server_fn_error_with_bus(permission_toast_bus, err);
+                    }
+                    result
                 }
-                Err(err) => {
-                    reveal_loading.set(false);
-                    let _ = report_server_fn_error_with_bus(permission_toast_bus, &err);
-                    reveal_error.set(Some(err.to_string()));
-                }
-            }
-        });
+            },
+        );
     });
 
     let on_rotate_row = Callback::new(move |row: VaultSecretRow| {

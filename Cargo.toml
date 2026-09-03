@@ -111,6 +111,8 @@ uf-help = { git = "https://github.com/unified-field-dev/unified-field-product", 
 uf-help-macros = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main" }
 uf-product-macros = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main" }
 lepton-shell = { git = "https://github.com/unified-field-dev/lepton-uf-app", branch = "main", default-features = false }
+lepton-auth = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
+lepton-auth-ui = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
 
 # Kits may still declare Valence/Orbital via crates.io; unify onto uf-dev git.
 [patch.crates-io]
@@ -146,3 +148,19 @@ orbital-discussion = { git = "https://github.com/unified-field-dev/orbital", bra
 orbital-history = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
 orbital-markdown = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
 orbital-style = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
+
+# Local step-up / Tier A gates not yet on published git tags.
+[patch."https://github.com/unified-field-dev/unified-field-product"]
+uf-product = { git = "https://github.com/deathbreakfast/unified-field-product", branch = "main", default-features = false }
+uf-product-macros = { git = "https://github.com/deathbreakfast/unified-field-product", branch = "main" }
+
+[patch."https://github.com/unified-field-dev/lepton"]
+lepton-auth = { git = "https://github.com/deathbreakfast/lepton", branch = "main", default-features = false }
+lepton-auth-ui = { git = "https://github.com/deathbreakfast/lepton", branch = "main", default-features = false }
+lepton-host-adapter = { git = "https://github.com/deathbreakfast/lepton", branch = "main", default-features = false }
+lepton-identity = { git = "https://github.com/deathbreakfast/lepton", branch = "main", default-features = false }
+lepton-spectra-telemetry = { git = "https://github.com/deathbreakfast/lepton", branch = "main" }
+lepton-smtp = { git = "https://github.com/deathbreakfast/lepton", branch = "main" }
+lepton-sms = { git = "https://github.com/deathbreakfast/lepton", branch = "main" }
+
+
