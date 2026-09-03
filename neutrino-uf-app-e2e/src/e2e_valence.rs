@@ -59,7 +59,33 @@ fn prepare_env() {
         // placeholder that would otherwise skip this branch and panic at boot.
         std::env::set_var("NEUTRINO_MASTER_KEY", "0".repeat(64));
         std::env::remove_var("NEUTRINO_ALLOW_WEAK_MASTER_KEY");
+        // Lab TOTP seal key for step-up verify / lazy re-seal.
+        std::env::set_var("LEPTON_TOTP_ALLOW_TEST_SEAL_KEY", "1");
     }
+}
+
+/// RFC 6238 fixture secret seeded onto e2e users (matches `neutrino_app::e2e_lab`).
+pub const HARNESS_TOTP_SECRET: &str = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+
+async fn seed_enabled_totp(user_id: &str, valence: &Valence) {
+    let now = Utc::now();
+    let factor_id = format!("totp-{user_id}");
+    let user_rec = valence::RecordId::new("user", user_id);
+    let factor = lepton::generated::TotpFactor::new(
+        user_rec,
+        HARNESS_TOTP_SECRET.to_string(),
+        None,
+        None,
+        None,
+        Some(now),
+        Some(now),
+        now,
+        now,
+    )
+    .expect("totp factor");
+    lepton::generated::TotpFactor::upsert(&factor_id, factor, valence)
+        .await
+        .expect("upsert totp");
 }
 
 async fn seed_user(id: &str, email_verified: bool, valence: &Valence) {
@@ -249,6 +275,10 @@ pub async fn init_e2e_valence() {
     seed_user("requestor", true, &system).await;
     seed_user("outsider", true, &system).await;
     seed_user("unverified", false, &system).await;
+
+    seed_enabled_totp("admin", &system).await;
+    seed_enabled_totp("requestor", &system).await;
+    seed_enabled_totp("outsider", &system).await;
 
     add_user_to_creators_group("admin", &system).await;
     add_user_to_creators_group("requestor", &system).await;

@@ -50,6 +50,7 @@ default = []
 hydrate = [
     "leptos/hydrate",
     "neutrino-app/hydrate",
+    "neutrino-app/e2e-lab",
     "uf-product/hydrate",
     "uf-integrations/hydrate",
     "uf-integrations/offering-help",
@@ -64,6 +65,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "neutrino-app/ssr",
+    "neutrino-app/e2e-lab",
     "uf-product/ssr",
     "uf-integrations/ssr",
     "uf-integrations/offering-help",

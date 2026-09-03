@@ -276,9 +276,16 @@ pub async fn reveal_vault_secret(
 ) -> Result<RevealedVaultSecret, ServerFnError> {
     #[cfg(feature = "ssr")]
     {
-        lepton_auth::verify_fresh_totp(&totp_code)
-            .await
-            .map_err(|e| e.to_server_fn_error())?;
+        #[cfg(feature = "e2e-lab")]
+        {
+            crate::e2e_lab::verify_fresh_totp(&totp_code).await?;
+        }
+        #[cfg(not(feature = "e2e-lab"))]
+        {
+            lepton_auth::verify_fresh_totp(&totp_code)
+                .await
+                .map_err(|e| e.to_server_fn_error())?;
+        }
     }
     #[cfg(not(feature = "ssr"))]
     {

@@ -156,6 +156,10 @@ pub mod permissions;
 pub mod server;
 pub mod shell;
 
+/// IsolatedLab fresh-TOTP helpers (enabled with Cargo feature `e2e-lab`).
+#[cfg(feature = "e2e-lab")]
+pub mod e2e_lab;
+
 pub use help_steps::ensure_help_steps_linked;
 pub use layout::NeutrinoAppLayout;
 pub use lazy_routes::{

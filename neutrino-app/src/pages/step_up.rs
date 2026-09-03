@@ -105,25 +105,47 @@ pub fn spawn_with_fresh_totp<T, F, Fut>(
     F: Fn(String) -> Fut + Clone + Send + Sync + 'static,
     Fut: std::future::Future<Output = Result<T, ServerFnError>> + 'static,
 {
-    let Some(ctrl) = use_step_up_controller() else {
-        error.set(Some(
-            "STEP_UP:step_up_required: step-up UI is not mounted".to_string(),
-        ));
-        return;
-    };
-    ctrl.request(
-        default_fresh_request(),
-        Callback::new(move |factors: StepUpFactors| {
-            let action = action.clone();
-            spawn_local_scoped(async move {
-                match action(factors.totp_code).await {
-                    Ok(value) => {
-                        ctrl.complete_success();
-                        on_ok.run(value);
-                    }
-                    Err(e) => ctrl.report_error(e.to_string()),
+    #[cfg(feature = "e2e-lab")]
+    {
+        let _ = default_fresh_request;
+        let _ = use_step_up_controller;
+        spawn_local_scoped(async move {
+            let code = match crate::e2e_lab::e2e_lab_totp_code().await {
+                Ok(c) => c,
+                Err(e) => {
+                    error.set(Some(e.to_string()));
+                    return;
                 }
-            });
-        }),
-    );
+            };
+            match action(code).await {
+                Ok(value) => on_ok.run(value),
+                Err(e) => error.set(Some(e.to_string())),
+            }
+        });
+        return;
+    }
+    #[cfg(not(feature = "e2e-lab"))]
+    {
+        let Some(ctrl) = use_step_up_controller() else {
+            error.set(Some(
+                "STEP_UP:step_up_required: step-up UI is not mounted".to_string(),
+            ));
+            return;
+        };
+        ctrl.request(
+            default_fresh_request(),
+            Callback::new(move |factors: StepUpFactors| {
+                let action = action.clone();
+                spawn_local_scoped(async move {
+                    match action(factors.totp_code).await {
+                        Ok(value) => {
+                            ctrl.complete_success();
+                            on_ok.run(value);
+                        }
+                        Err(e) => ctrl.report_error(e.to_string()),
+                    }
+                });
+            }),
+        );
+    }
 }

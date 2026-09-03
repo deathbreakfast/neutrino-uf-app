@@ -182,6 +182,31 @@ test.describe("pw-vault-authz", () => {
     await expectMutationDenied(page);
     await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible();
   });
+
+  test("pw-vault-step-up-required-sad", async ({ page }) => {
+    await seedAuth(page, "admin", { grant_step_up_window: false });
+    await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+    await waitForHydrated(page);
+    await expect(page.getByTestId("neutrino-secrets-list-page")).toBeVisible({
+      timeout: 60_000,
+    });
+
+    const name = `e2e-stepup-${Date.now()}`;
+    await page.getByTestId("neutrino-create-secret-btn").click();
+    await page.getByTestId("neutrino-create-name").locator("input").fill(name);
+    await page
+      .getByTestId("neutrino-create-scope")
+      .locator("input")
+      .fill("/e2e/stepup");
+    await page.getByTestId("neutrino-create-kind").locator("input").fill("token");
+    await page
+      .getByTestId("neutrino-create-plaintext")
+      .locator("input")
+      .fill("blocked");
+    await page.getByTestId("neutrino-create-submit").click();
+    await expectMutationDenied(page);
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toHaveCount(0);
+  });
 });
 
 test.describe("pw-vault-requestor", () => {
