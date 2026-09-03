@@ -256,7 +256,7 @@ test.describe("pw-vault-authz", () => {
     });
   });
 
-  test("pw-vault-rotate-delete-without-step-up-sad", async ({ page }) => {
+  test("pw-vault-rotate-without-step-up-sad", async ({ page }) => {
     const seeded = await seedAuth(page, "admin", { step_up_window: "none" });
     const name = seeded.fixtures.admin_secret_name;
     await page.goto("/secrets", { waitUntil: "domcontentloaded" });
@@ -268,12 +268,32 @@ test.describe("pw-vault-authz", () => {
     await clickSecretAction(page, name, "Rotate");
     await page.getByLabel("New plaintext").fill("should-fail");
     await page.getByTestId("neutrino-rotate-submit").click();
-    await expectMutationDenied(page);
+    await expect(
+      page
+        .getByText(/Confirm it's you/i)
+        .or(page.locator(".orbital-message-bar--error").first())
+        .or(page.getByTestId("neutrino-rotate-error")),
+    ).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId(`neutrino-secret-version-${name}`)).toHaveText("1");
+  });
+
+  test("pw-vault-delete-without-step-up-sad", async ({ page }) => {
+    const seeded = await seedAuth(page, "admin", { step_up_window: "none" });
+    const name = seeded.fixtures.admin_secret_name;
+    await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+    await waitForHydrated(page);
+    await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible({
+      timeout: 60_000,
+    });
 
     await clickSecretAction(page, name, "Delete");
     await page.getByTestId("neutrino-delete-confirm").click();
-    await expectMutationDenied(page);
+    await expect(
+      page
+        .getByText(/Confirm it's you/i)
+        .or(page.locator(".orbital-message-bar--error").first())
+        .or(page.getByTestId("neutrino-delete-error")),
+    ).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toBeVisible();
   });
 
