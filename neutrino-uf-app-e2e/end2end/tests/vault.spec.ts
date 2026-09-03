@@ -204,7 +204,12 @@ test.describe("pw-vault-authz", () => {
       .locator("input")
       .fill("blocked");
     await page.getByTestId("neutrino-create-submit").click();
-    await expectMutationDenied(page);
+    await expect(
+      page
+        .getByText(/Confirm it's you/i)
+        .or(page.locator(".orbital-message-bar--error").first())
+        .or(page.getByTestId("neutrino-create-error")),
+    ).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toHaveCount(0);
   });
 
@@ -229,7 +234,12 @@ test.describe("pw-vault-authz", () => {
       .locator("input")
       .fill("blocked");
     await page.getByTestId("neutrino-create-submit").click();
-    await expectMutationDenied(page);
+    await expect(
+      page
+        .getByText(/Confirm it's you/i)
+        .or(page.locator(".orbital-message-bar--error").first())
+        .or(page.getByTestId("neutrino-create-error")),
+    ).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId(`neutrino-secret-row-${name}`)).toHaveCount(0);
   });
 
