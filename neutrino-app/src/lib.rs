@@ -12,6 +12,9 @@
 //!   expose list, create, reveal, rotate, and delete pages at `/secrets`, gated
 //!   by an authenticated verified session. Mount once when composing the host
 //!   route tree at startup. [Get started](#mount-neutrino-routes).
+//! - **Fresh-code reveal** — Break-glass plaintext reveal takes an explicit TOTP
+//!   code and `step_up = "fresh"` so a sudo window alone is not enough.
+//!   [Get started](#reveal-with-a-fresh-code).
 //! - **Help spotlight tours** — Route-scoped Orbital spotlights that teach the
 //!   vault list and ACL placeholder. Call [`ensure_help_steps_linked`] so inventory
 //!   links into the host; enable `offering-help` on the product shell.
@@ -94,6 +97,40 @@
 //! [`NeutrinoRoutes`] tree; server fns execute on the SSR host. If the host omitted
 //! `ssr`, list/create/reveal calls fail at the Leptos server-fn boundary rather than
 //! at route mount.
+//!
+//! ## Reveal with a fresh code
+//!
+//! Break-glass plaintext reveal is stronger than other Tier A vault mutations. The
+//! server fn uses `step_up = "fresh"` and takes an explicit `totp_code` so an open
+//! sudo window alone cannot unlock secret material. Operators enter a code in the
+//! reveal UI; the handler calls `lepton_auth::verify_fresh_totp` (or the e2e-lab
+//! substitute) before `neutrino::reveal_vault_secret`.
+//!
+//! **Prerequisites:** Mounted [`NeutrinoRoutes`], `SecretsReveal` Gauge grant, enrolled
+//! TOTP, and `ssr` on the host. Routine create/rotate/delete use window `step_up`
+//! instead (see [`mod@server`]).
+//!
+//! ```rust,ignore
+//! use leptos::prelude::*;
+//!
+//! // Expands with permission + step_up = "fresh"; handler still verifies the code.
+//! #[uf_product_macros::server(permission = "SecretsReveal", step_up = "fresh")]
+//! pub async fn reveal_vault_secret(
+//!     id: String,
+//!     totp_code: String,
+//! ) -> Result<String, ServerFnError> {
+//!     lepton_auth::verify_fresh_totp(&totp_code)
+//!         .await
+//!         .map_err(|e| ServerFnError::new(format!("STEP_UP:{e}")))?;
+//!     // neutrino::reveal_vault_secret(...).await.map_err(...)
+//!     Ok(id)
+//! }
+//! ```
+//!
+//! Missing or wrong codes return a `STEP_UP:` [`ServerFnError`]. A valid sudo window
+//! without a fresh code still fails. List metadata stays on `SecretsRead` without
+//! step-up. Next: [Mount Neutrino routes](#mount-neutrino-routes) or lepton-auth
+//! `verify_fresh_totp`.
 //!
 //! ## Help spotlight tours
 //!
