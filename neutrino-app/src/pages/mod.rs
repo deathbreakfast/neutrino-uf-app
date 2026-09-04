@@ -1,4 +1,4 @@
-//! Top-level route pages for the Secrets app: vault list and ACL placeholder.
+//! Top-level route pages for the Secrets app: vault list and ACL manage.
 
 mod acl_manage;
 mod secrets_list;

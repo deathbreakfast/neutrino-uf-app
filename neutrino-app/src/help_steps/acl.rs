@@ -1,4 +1,4 @@
-//! Spotlight steps for the ACL placeholder (`/secrets/acl`).
+//! Spotlight steps for the ACL manage page (`/secrets/acl`).
 
 use leptos::prelude::*;
 use uf_help_macros::help_spotlight_step;
@@ -9,15 +9,15 @@ use super::help_stack;
 #[help_spotlight_step(
     route = "/secrets/acl",
     feature_highlight = "secrets-acl-intro",
-    title = "Sharing, coming soon",
+    title = "Share one secret at a time",
     order = 10
 )]
 #[component]
 pub fn SecretsAclIntroHelp() -> impl IntoView {
     help_stack(
         "help-step-secrets-acl-intro",
-        "An access control list (ACL) will let you share one secret with specific people or groups without opening the whole vault.",
-        Some("This page is reserved for that editor. Until it ships, you see a placeholder, and you manage credentials on the Secrets list."),
+        "Grant View, Reveal, Edit, Delete, or Maintain on a single secret without opening the whole vault.",
+        Some("Pick a secret, review who already has each action, then add or revoke direct user grants."),
         &[],
     )
 }
@@ -26,7 +26,7 @@ pub fn SecretsAclIntroHelp() -> impl IntoView {
 #[help_spotlight_step(
     route = "/secrets/acl",
     feature_highlight = "secrets-acl-title",
-    title = "Secret ACLs",
+    title = "Secret access grants",
     spotlight = "secrets-acl-title",
     position = "bottom",
     order = 20
@@ -35,27 +35,46 @@ pub fn SecretsAclIntroHelp() -> impl IntoView {
 pub fn SecretsAclTitleHelp() -> impl IntoView {
     help_stack(
         "help-step-secrets-acl-title",
-        "When the matrix UI lands, this heading will still mark the sharing workspace for a single secret.",
+        "This heading marks the sharing workspace for the secret you selected.",
         None,
         &[],
     )
 }
 
-/// Empty-state placeholder.
+/// Secret picker.
 #[help_spotlight_step(
     route = "/secrets/acl",
-    feature_highlight = "secrets-acl-empty",
-    title = "What you see today",
-    spotlight = "secrets-acl-empty",
+    feature_highlight = "secrets-acl-secret-select",
+    title = "Choose a secret",
+    spotlight = "secrets-acl-secret-select",
     position = "bottom",
     order = 30
 )]
 #[component]
-pub fn SecretsAclEmptyHelp() -> impl IntoView {
+pub fn SecretsAclSecretSelectHelp() -> impl IntoView {
     help_stack(
-        "help-step-secrets-acl-empty",
-        "The empty state means fine-grained ACL editing is not available yet. It is a placeholder, and it does not mean your vault has no secrets.",
-        Some("Today, access is coarse: roles get permissions such as read metadata, reveal, write, or rotate. Those checks run on the server when you press a button."),
+        "help-step-secrets-acl-secret-select",
+        "Start here. Grants always apply to one secret at a time.",
+        Some("You need SecretsGrantManage and maintain rights on that secret's Gauge permissions to see or edit grants."),
+        &[],
+    )
+}
+
+/// Grant form.
+#[help_spotlight_step(
+    route = "/secrets/acl",
+    feature_highlight = "secrets-acl-grant-form",
+    title = "Add a grant",
+    spotlight = "secrets-acl-grant-form",
+    position = "top",
+    order = 40
+)]
+#[component]
+pub fn SecretsAclGrantFormHelp() -> impl IntoView {
+    help_stack(
+        "help-step-secrets-acl-grant-form",
+        "Enter a user id and pick an action. Reveal and Maintain ask for a fresh authenticator code.",
+        None,
         &[],
     )
 }
@@ -67,7 +86,7 @@ pub fn SecretsAclEmptyHelp() -> impl IntoView {
     title = "Back to the vault",
     spotlight = "secrets-nav-secrets",
     position = "right",
-    order = 40
+    order = 50
 )]
 #[component]
 pub fn SecretsAclNavSecretsHelp() -> impl IntoView {

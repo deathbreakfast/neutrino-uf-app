@@ -1315,7 +1315,7 @@ dependencies = [
 [[package]]
 name = "gauge"
 version = "0.1.0"
-source = "git+https://github.com/unified-field-dev/gauge?branch=main#cd974829382821fd9b0d3e470bfa14292be09589"
+source = "git+https://github.com/deathbreakfast/gauge?branch=main#0a5e4aaf78527f90d6669c2c102e4c60d8cb089c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2725,7 +2725,7 @@ dependencies = [
 [[package]]
 name = "neutrino"
 version = "0.1.0"
-source = "git+https://github.com/unified-field-dev/neutrino?branch=main#5c6f4f94d7c9fc0a74e1a1fd4ed2111dddb73fca"
+source = "git+https://github.com/deathbreakfast/neutrino?branch=main#b0feabef8ae4e35dc6b79b7f2132bc4164827117"
 dependencies = [
  "anyhow",
  "argon2",
@@ -2790,7 +2790,7 @@ dependencies = [
 [[package]]
 name = "neutrino-spectra-telemetry"
 version = "0.1.0"
-source = "git+https://github.com/unified-field-dev/neutrino?branch=main#5c6f4f94d7c9fc0a74e1a1fd4ed2111dddb73fca"
+source = "git+https://github.com/deathbreakfast/neutrino?branch=main#b0feabef8ae4e35dc6b79b7f2132bc4164827117"
 dependencies = [
  "anyhow",
  "chrono",

@@ -115,6 +115,13 @@ lepton-auth = { git = "https://github.com/unified-field-dev/lepton", branch = "m
 lepton-auth-ui = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
 totp-rs = { version = "5.7", default-features = false }
 
+# Until uf-dev gauge#4 and deathbreakfast neutrino main (grant APIs / chronon script) land on uf-dev.
+[patch."https://github.com/unified-field-dev/gauge"]
+gauge = { git = "https://github.com/deathbreakfast/gauge", branch = "main" }
+
+[patch."https://github.com/unified-field-dev/neutrino"]
+neutrino = { git = "https://github.com/deathbreakfast/neutrino", branch = "main", default-features = false }
+
 # Kits may still declare Valence/Orbital via crates.io; unify onto uf-dev git.
 [patch.crates-io]
 uf-valence = { git = "https://github.com/unified-field-dev/valence", branch = "main" }

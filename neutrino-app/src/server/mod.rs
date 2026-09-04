@@ -56,6 +56,14 @@ pub struct RevealedVaultSecret {
     pub plaintext_b64: String,
 }
 
+#[cfg(feature = "ssr")]
+pub(crate) mod grants;
+
+pub use grants::{
+    grant_secret_action, list_secret_grants, revoke_secret_action, SecretActionGrant,
+    SecretGrantPrincipal,
+};
+
 /// Permission names enforced by vault `#[server]` wrappers.
 #[cfg(feature = "ssr")]
 pub mod vault_permissions {
@@ -73,7 +81,9 @@ pub mod vault_permissions {
 }
 
 #[cfg(feature = "ssr")]
-fn session_valence_from_ctx(ctx: &higgs::Higgs) -> Result<valence::Valence, ServerFnError> {
+pub(crate) fn session_valence_from_ctx(
+    ctx: &higgs::Higgs,
+) -> Result<valence::Valence, ServerFnError> {
     ctx.valence()
         .map_err(|e| ServerFnError::new(format!("Failed to build request Valence: {e}")))
 }
