@@ -56,7 +56,6 @@ pub struct RevealedVaultSecret {
     pub plaintext_b64: String,
 }
 
-#[cfg(feature = "ssr")]
 pub(crate) mod grants;
 
 pub use grants::{
