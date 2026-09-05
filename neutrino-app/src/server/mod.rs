@@ -11,8 +11,8 @@
 //!    named permission on the request actor.
 //! 2. **Valence privacy** — session [`higgs::Higgs::valence`] drives ORM access; Neutrino
 //!    schemas enforce per-secret Gauge grants inside Valence (no mid-request System elevate).
-//! 3. **Per-secret bridge** — [`neutrino::VaultAccessContext`] remains a compat fallback
-//!    where Gauge bundles were skipped (control-plane seals).
+//! 3. **Per-secret Gauge** — vault helpers authorize via the store's request actor
+//!    (`actor_can_secret` / Valence privacy policies).
 //! 4. **Audit** — success rows append under the session actor; denials use a System sink.
 
 use leptos::prelude::*;
@@ -116,32 +116,6 @@ fn actor_owner_label(actor: Actor) -> String {
 /// Client-safe message when domain failures must not leak internal detail.
 #[cfg(feature = "ssr")]
 const INTERNAL_VAULT_ERROR: &str = "An internal vault error occurred. Check server logs.";
-
-/// Build vault access context: owner match + optional Super User break-glass `/`.
-#[cfg(feature = "ssr")]
-async fn vault_access_from_ctx(
-    ctx: &higgs::Higgs,
-) -> Result<neutrino::VaultAccessContext, ServerFnError> {
-    let actor_label = actor_owner_label(ctx.actor());
-    let user_v = session_valence_from_ctx(ctx)?;
-    vault_access_for_actor(&user_v, actor_label).await
-}
-
-/// Maps session Valence + actor label to [`neutrino::VaultAccessContext`].
-#[cfg(feature = "ssr")]
-async fn vault_access_for_actor(
-    user_v: &valence::Valence,
-    actor_label: String,
-) -> Result<neutrino::VaultAccessContext, ServerFnError> {
-    let is_super = gauge::super_user::actor_is_super_user(user_v)
-        .await
-        .map_err(|e| ServerFnError::new(format!("Failed to evaluate Super User access: {e}")))?;
-    if is_super {
-        Ok(neutrino::VaultAccessContext::break_glass(actor_label))
-    } else {
-        Ok(neutrino::VaultAccessContext::owner_only(actor_label))
-    }
-}
 
 #[cfg(feature = "ssr")]
 #[allow(clippy::needless_pass_by_value)] // `map_err(map_neutrino_error)` needs owned Err
@@ -249,8 +223,7 @@ pub async fn neutrino_vault_ping() -> Result<(), ServerFnError> {
 pub async fn list_vault_secrets() -> Result<Vec<VaultSecretRow>, ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let access = vault_access_from_ctx(&ctx).await?;
-    neutrino::list_vault_secrets(&session_v, &access)
+    neutrino::list_vault_secrets(&session_v)
         .await
         .map_err(map_neutrino_error)
 }
@@ -303,9 +276,8 @@ pub async fn reveal_vault_secret(
     }
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let access = vault_access_from_ctx(&ctx).await?;
     let store = store_for_request(&ctx, session_v);
-    neutrino::reveal_vault_secret(&store, id, &access)
+    neutrino::reveal_vault_secret(&store, id)
         .await
         .map_err(map_neutrino_error)
 }
@@ -318,9 +290,8 @@ pub async fn delete_vault_secret(
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let access = vault_access_from_ctx(&ctx).await?;
     let store = store_for_request(&ctx, session_v);
-    neutrino::delete_vault_secret(&store, id, &access)
+    neutrino::delete_vault_secret(&store, id)
         .await
         .map_err(map_neutrino_error)
 }
@@ -336,10 +307,9 @@ pub async fn rotate_vault_secret(
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
     let actor = actor_owner_label(ctx.actor());
-    let access = vault_access_from_ctx(&ctx).await?;
     let store = store_for_request(&ctx, session_v);
     let secret_id = id.clone();
-    let row = neutrino::rotate_vault_secret(&store, id, new_plaintext, actor.as_str(), &access)
+    let row = neutrino::rotate_vault_secret(&store, id, new_plaintext, actor.as_str())
         .await
         .map_err(map_neutrino_error)?;
 
