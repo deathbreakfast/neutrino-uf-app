@@ -83,7 +83,7 @@ async fn seed_enabled_totp(user_id: &str, valence: &Valence) {
         now,
     )
     .expect("totp factor");
-    lepton::generated::TotpFactor::upsert(&factor_id, factor, valence)
+    lepton::generated::TotpFactor::upsert_used(&factor_id, factor, valence, valence::use_!("upsert TotpFactor in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("upsert totp");
 }
@@ -104,21 +104,21 @@ async fn seed_user(id: &str, email_verified: bool, valence: &Valence) {
         now,
     )
     .expect("build user");
-    lepton::generated::User::upsert(id, user, valence)
+    lepton::generated::User::upsert_used(id, user, valence, valence::use_!("upsert User in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("upsert user");
 }
 
 async fn add_user_to_creators_group(user_id: &str, v: &Valence) {
-    let group = gauge::generated::PermissionGroup::get("neutrino.secret.creators", v)
+    let group = gauge::generated::PermissionGroup::get_used("neutrino.secret.creators", v, valence::use_!("get PermissionGroup in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("get creators group")
         .expect("neutrino.secret.creators");
-    let user = lepton::generated::User::get(user_id, v)
+    let user = lepton::generated::User::get_used(user_id, v, valence::use_!("get User in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("get user")
         .expect("user row");
-    let principal = gauge::generated::PermissionUserPrincipal::upsert(
+    let principal = gauge::generated::PermissionUserPrincipal::upsert_used(
         &format!("user:{user_id}"),
         gauge::generated::PermissionUserPrincipal::new(
             user.id().expect("user id").clone(),
@@ -126,6 +126,7 @@ async fn add_user_to_creators_group(user_id: &str, v: &Valence) {
         )
         .expect("principal"),
         v,
+        valence::use_!("upsert PermissionUserPrincipal in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."),
     )
     .await
     .expect("upsert principal");
@@ -144,15 +145,15 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
     )
     .expect("build super user group");
     let created =
-        gauge::generated::PermissionGroup::upsert("super_user_group", super_group, system)
+        gauge::generated::PermissionGroup::upsert_used("super_user_group", super_group, system, valence::use_!("upsert PermissionGroup in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
             .await
             .expect("upsert super user group");
 
-    let member = lepton::generated::User::get(member_user_id, system)
+    let member = lepton::generated::User::get_used(member_user_id, system, valence::use_!("get User in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("query member")
         .expect("member exists");
-    let principal = gauge::generated::PermissionUserPrincipal::upsert(
+    let principal = gauge::generated::PermissionUserPrincipal::upsert_used(
         &format!("user:{member_user_id}"),
         gauge::generated::PermissionUserPrincipal::new(
             member.id().expect("member id").clone(),
@@ -160,6 +161,7 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
         )
         .expect("new principal"),
         system,
+        valence::use_!("upsert PermissionUserPrincipal in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."),
     )
     .await
     .expect("upsert principal");
@@ -174,13 +176,13 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
 }
 
 async fn demote_admin_from_super_user(system: &Valence) {
-    let Some(super_group) = gauge::generated::PermissionGroup::get("super_user_group", system)
+    let Some(super_group) = gauge::generated::PermissionGroup::get_used("super_user_group", system, valence::use_!("get PermissionGroup in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("get super user group")
     else {
         return;
     };
-    let Some(principal) = gauge::generated::PermissionUserPrincipal::get("user:admin", system)
+    let Some(principal) = gauge::generated::PermissionUserPrincipal::get_used("user:admin", system, valence::use_!("get PermissionUserPrincipal in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
         .await
         .expect("get admin principal")
     else {
