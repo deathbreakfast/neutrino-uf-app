@@ -83,7 +83,7 @@ async fn seed_enabled_totp(user_id: &str, valence: &Valence) {
         now,
     )
     .expect("totp factor");
-    lepton::generated::TotpFactor::upsert_used(&factor_id, factor, valence, valence::use_!("upsert TotpFactor in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    lepton::generated::TotpFactor::upsert_used(&factor_id, factor, valence, valence::use_!(r#"**Test:** Fixture **Totp Factor** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("upsert totp");
 }
@@ -104,17 +104,17 @@ async fn seed_user(id: &str, email_verified: bool, valence: &Valence) {
         now,
     )
     .expect("build user");
-    lepton::generated::User::upsert_used(id, user, valence, valence::use_!("upsert User in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    lepton::generated::User::upsert_used(id, user, valence, valence::use_!(r#"**Test:** Fixture **User** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("upsert user");
 }
 
 async fn add_user_to_creators_group(user_id: &str, v: &Valence) {
-    let group = gauge::generated::PermissionGroup::get_used("neutrino.secret.creators", v, valence::use_!("get PermissionGroup in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    let group = gauge::generated::PermissionGroup::get_used("neutrino.secret.creators", v, valence::use_!(r#"**Test:** Fixture **Permission Group** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get creators group")
         .expect("neutrino.secret.creators");
-    let user = lepton::generated::User::get_used(user_id, v, valence::use_!("get User in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    let user = lepton::generated::User::get_used(user_id, v, valence::use_!(r#"**Test:** Fixture **User** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get user")
         .expect("user row");
@@ -126,7 +126,7 @@ async fn add_user_to_creators_group(user_id: &str, v: &Valence) {
         )
         .expect("principal"),
         v,
-        valence::use_!("upsert PermissionUserPrincipal in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."),
+        valence::use_!(r#"**Test:** Fixture **Permission User Principal** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
     )
     .await
     .expect("upsert principal");
@@ -145,11 +145,11 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
     )
     .expect("build super user group");
     let created =
-        gauge::generated::PermissionGroup::upsert_used("super_user_group", super_group, system, valence::use_!("upsert PermissionGroup in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+        gauge::generated::PermissionGroup::upsert_used("super_user_group", super_group, system, valence::use_!(r#"**Test:** Fixture **Permission Group** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
             .await
             .expect("upsert super user group");
 
-    let member = lepton::generated::User::get_used(member_user_id, system, valence::use_!("get User in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    let member = lepton::generated::User::get_used(member_user_id, system, valence::use_!(r#"**Test:** Fixture **User** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("query member")
         .expect("member exists");
@@ -161,7 +161,7 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
         )
         .expect("new principal"),
         system,
-        valence::use_!("upsert PermissionUserPrincipal in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."),
+        valence::use_!(r#"**Test:** Fixture **Permission User Principal** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
     )
     .await
     .expect("upsert principal");
@@ -176,13 +176,13 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
 }
 
 async fn demote_admin_from_super_user(system: &Valence) {
-    let Some(super_group) = gauge::generated::PermissionGroup::get_used("super_user_group", system, valence::use_!("get PermissionGroup in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    let Some(super_group) = gauge::generated::PermissionGroup::get_used("super_user_group", system, valence::use_!(r#"**Test:** Fixture **Permission Group** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get super user group")
     else {
         return;
     };
-    let Some(principal) = gauge::generated::PermissionUserPrincipal::get_used("user:admin", system, valence::use_!("get PermissionUserPrincipal in neutrino-uf-app-e2e/src/e2e_valence.rs; Valence persistence for this feature path; typed store; visible to test harness."))
+    let Some(principal) = gauge::generated::PermissionUserPrincipal::get_used("user:admin", system, valence::use_!(r#"**Test:** Fixture **Permission User Principal** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get admin principal")
     else {
