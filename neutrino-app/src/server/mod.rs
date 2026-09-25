@@ -123,7 +123,8 @@ fn map_neutrino_error(err: neutrino::NeutrinoError) -> ServerFnError {
     match &err {
         NeutrinoError::NotFound { .. }
         | NeutrinoError::AccessDenied { .. }
-        | NeutrinoError::Validation { .. } => ServerFnError::new(err.to_string()),
+        | NeutrinoError::Validation { .. }
+        | NeutrinoError::InvalidState { .. } => ServerFnError::new(err.to_string()),
         NeutrinoError::Config(_)
         | NeutrinoError::Crypto { .. }
         | NeutrinoError::Unsupported { .. }
@@ -182,6 +183,12 @@ mod tests {
             message: "required".into(),
         });
         assert!(validation.to_string().contains("required"));
+
+        let invalid = map_neutrino_error(NeutrinoError::InvalidState {
+            operation: "lease",
+            message: "archived only".into(),
+        });
+        assert!(invalid.to_string().contains("archived only"));
     }
 
     #[test]
@@ -222,7 +229,7 @@ pub async fn neutrino_vault_ping() -> Result<(), ServerFnError> {
 pub async fn list_vault_secrets() -> Result<Vec<VaultSecretRow>, ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    neutrino::list_vault_secrets(&session_v)
+    neutrino::list_vault_secrets(&session_v, None)
         .await
         .map_err(map_neutrino_error)
 }
@@ -295,7 +302,7 @@ pub async fn delete_vault_secret(
         .map_err(map_neutrino_error)
 }
 
-/// Rotates ciphertext to a new version (Photon / Gluon bootstrap publish is deferred).
+/// Rotates ciphertext to a new version (publishes Photon event when DB-scoped).
 #[uf_product_macros::server(permission = "SecretsRotate", step_up)]
 pub async fn rotate_vault_secret(
     /// Unique identifier of the secret to rotate.
@@ -312,11 +319,41 @@ pub async fn rotate_vault_secret(
         .await
         .map_err(map_neutrino_error)?;
 
-    tracing::debug!(
-        target: "neutrino_app",
-        secret_id = %secret_id,
-        "vault rotate complete (Photon publish deferred)"
-    );
+    // Live L4: DB-scoped rotates publish `neutrino.secret.rotated` for Gluon apply.
+    // Non-DB scopes (provider tokens, etc.) stay quiet — no mid-request System elevate.
+    match neutrino::publish_if_db_scoped_secret_rotated(
+        &row.id,
+        row.current_version,
+        None,
+        &row.scope_path,
+        format!("vault_rotate:{}:{}", row.id, row.current_version),
+    )
+    .await
+    {
+        Ok(true) => {
+            tracing::info!(
+                target: "neutrino_app",
+                secret_id = %secret_id,
+                version = row.current_version,
+                "vault rotate published neutrino.secret.rotated"
+            );
+        }
+        Ok(false) => {
+            tracing::debug!(
+                target: "neutrino_app",
+                secret_id = %secret_id,
+                "vault rotate complete (non-DB scope; Photon publish skipped)"
+            );
+        }
+        Err(e) => {
+            tracing::warn!(
+                target: "neutrino_app",
+                secret_id = %secret_id,
+                error = %e,
+                "vault rotate succeeded but Photon publish failed"
+            );
+        }
+    }
 
     Ok(row)
 }

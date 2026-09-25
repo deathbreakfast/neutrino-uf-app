@@ -83,6 +83,7 @@ ssr = [
     "lepton-auth-ui/ssr",
     "uf-search-core/ssr",
     "neutrino/ssr",
+    "neutrino/photon",
     "dep:gauge",
     "gauge/ssr",
     "dep:base64",

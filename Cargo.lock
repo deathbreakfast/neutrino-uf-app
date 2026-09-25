@@ -505,7 +505,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uf-quark 0.1.3 (git+https://github.com/unified-field-dev/quark?branch=main)",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -583,7 +583,7 @@ source = "git+https://github.com/unified-field-dev/chronon-valence-identity?bran
 dependencies = [
  "chronon-core",
  "serde_json",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -626,7 +626,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1137,7 +1137,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1352,8 +1352,8 @@ dependencies = [
  "uf-search-core 0.1.0 (git+https://github.com/unified-field-dev/unified-field-product?branch=main)",
  "uf-spectra",
  "uf-spectra-core",
- "uf-valence 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
  "uuid",
 ]
 
@@ -1571,7 +1571,7 @@ dependencies = [
  "log",
  "serde_json",
  "thiserror 2.0.20",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -1589,7 +1589,7 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -1605,7 +1605,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -2143,7 +2143,7 @@ dependencies = [
  "tower-sessions",
  "tracing",
  "uf-photon",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
  "url",
  "urlencoding",
  "wasm-bindgen",
@@ -2197,8 +2197,8 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
  "uuid",
 ]
 
@@ -2216,8 +2216,8 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
  "uuid",
 ]
 
@@ -2687,8 +2687,8 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
  "uuid",
 ]
 
@@ -2782,7 +2782,6 @@ checksum = "743fb55ba31b18fb1ecef6bdc9aa2743314978ac084044301a7eee33fb99a20d"
 [[package]]
 name = "neutrino"
 version = "0.1.0"
-source = "git+https://github.com/deathbreakfast/neutrino?branch=main#7a6b3bf9eb0481141ee0929b68b43b8d911ee7de"
 dependencies = [
  "anyhow",
  "argon2",
@@ -2791,16 +2790,19 @@ dependencies = [
  "blake3",
  "chacha20poly1305",
  "chrono",
+ "futures",
  "gauge",
  "log",
  "neutrino-spectra-telemetry",
+ "photon-macros",
  "rand_core 0.6.4",
  "serde",
  "serde_json",
+ "uf-photon",
  "uf-spectra",
  "uf-spectra-core",
- "uf-valence 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
+ "uf-valence",
+ "uf-valence-codegen",
  "uuid",
  "zeroize",
 ]
@@ -2839,7 +2841,7 @@ dependencies = [
  "uf-product",
  "uf-product-macros",
  "uf-search-core 0.1.0 (git+https://github.com/unified-field-dev/unified-field-product?branch=main)",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -2847,7 +2849,6 @@ dependencies = [
 [[package]]
 name = "neutrino-spectra-telemetry"
 version = "0.1.0"
-source = "git+https://github.com/deathbreakfast/neutrino?branch=main#7a6b3bf9eb0481141ee0929b68b43b8d911ee7de"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2894,7 +2895,7 @@ dependencies = [
  "uf-help",
  "uf-integrations",
  "uf-product",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
  "wasm-bindgen",
 ]
 
@@ -3999,7 +4000,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4225,8 +4226,8 @@ dependencies = [
  "serde",
  "serde_json",
  "tracing",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
 ]
 
 [[package]]
@@ -5709,7 +5710,7 @@ dependencies = [
  "uf-help-macros",
  "uf-product",
  "uf-product-macros",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
  "uuid",
 ]
 
@@ -5762,8 +5763,8 @@ dependencies = [
  "serde_json",
  "tracing",
  "uf-photon",
- "uf-valence 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
  "uuid",
 ]
 
@@ -5822,8 +5823,8 @@ dependencies = [
  "uf-search-core 0.1.0 (git+https://github.com/deathbreakfast/unified-field-product?branch=main)",
  "uf-spectra",
  "uf-spectra-core",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-codegen 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
+ "uf-valence-codegen",
  "url",
 ]
 
@@ -5863,7 +5864,7 @@ dependencies = [
  "anyhow",
  "serde",
  "uf-quark 0.1.3 (git+https://github.com/unified-field-dev/quark?branch=main)",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -5874,7 +5875,7 @@ dependencies = [
  "anyhow",
  "serde",
  "uf-quark 0.1.3 (git+https://github.com/unified-field-dev/quark?branch=main)",
- "uf-valence 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence",
 ]
 
 [[package]]
@@ -5912,56 +5913,12 @@ dependencies = [
 [[package]]
 name = "uf-valence"
 version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "uf-valence-backend-mem 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uf-valence-backend-sqlite 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uf-valence-macros 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
-]
-
-[[package]]
-name = "uf-valence"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "uf-valence-backend-mem 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-backend-sqlite 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-macros 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence"
-version = "0.1.5"
 source = "git+https://github.com/unified-field-dev/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
 dependencies = [
- "uf-valence-backend-mem 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-backend-sqlite 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-core 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-macros 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence-backend-mem"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "async-trait",
- "serde_json",
- "tokio",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
-]
-
-[[package]]
-name = "uf-valence-backend-mem"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "async-trait",
- "serde_json",
- "tokio",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
+ "uf-valence-backend-mem",
+ "uf-valence-backend-sqlite",
+ "uf-valence-core",
+ "uf-valence-macros",
 ]
 
 [[package]]
@@ -5972,37 +5929,7 @@ dependencies = [
  "async-trait",
  "serde_json",
  "tokio",
- "uf-valence-core 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence-backend-sql"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uuid",
-]
-
-[[package]]
-name = "uf-valence-backend-sql"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uuid",
+ "uf-valence-core",
 ]
 
 [[package]]
@@ -6016,34 +5943,8 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
- "uf-valence-core 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence-core",
  "uuid",
-]
-
-[[package]]
-name = "uf-valence-backend-sqlite"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "async-trait",
- "serde_json",
- "sqlx",
- "tokio",
- "uf-valence-backend-sql 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
-]
-
-[[package]]
-name = "uf-valence-backend-sqlite"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "async-trait",
- "serde_json",
- "sqlx",
- "tokio",
- "uf-valence-backend-sql 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
 ]
 
 [[package]]
@@ -6055,36 +5956,8 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
- "uf-valence-backend-sql 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-core 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence-codegen"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "anyhow",
- "prettyplease",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uf-valence-schema-dsl 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
-]
-
-[[package]]
-name = "uf-valence-codegen"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "anyhow",
- "prettyplease",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
- "uf-valence-core 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uf-valence-schema-dsl 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
+ "uf-valence-backend-sql",
+ "uf-valence-core",
 ]
 
 [[package]]
@@ -6097,46 +5970,8 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
- "uf-valence-core 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
- "uf-valence-schema-dsl 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence-core"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "async-trait",
- "chrono",
- "inventory",
- "quick_cache",
- "regex",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "uf-valence-telemetry 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
- "uuid",
-]
-
-[[package]]
-name = "uf-valence-core"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "async-trait",
- "chrono",
- "inventory",
- "quick_cache",
- "regex",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "uf-valence-telemetry 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
- "uuid",
+ "uf-valence-core",
+ "uf-valence-schema-dsl",
 ]
 
 [[package]]
@@ -6154,61 +5989,19 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tracing",
- "uf-valence-telemetry 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
+ "uf-valence-telemetry",
  "uuid",
 ]
 
 [[package]]
 name = "uf-valence-macros"
 version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
- "uf-valence-schema-dsl 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency)",
-]
-
-[[package]]
-name = "uf-valence-macros"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
- "uf-valence-schema-dsl 0.1.5 (git+https://github.com/deathbreakfast/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence-macros"
-version = "0.1.5"
 source = "git+https://github.com/unified-field-dev/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
 dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
- "uf-valence-schema-dsl 0.1.5 (git+https://github.com/unified-field-dev/valence?branch=main)",
-]
-
-[[package]]
-name = "uf-valence-schema-dsl"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "uf-valence-schema-dsl"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
+ "uf-valence-schema-dsl",
 ]
 
 [[package]]
@@ -6219,22 +6012,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "uf-valence-telemetry"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=feat%2Fdata-use-transparency#3dc3284685d8af54492bfe1d3da97651d94a615a"
-dependencies = [
- "serde_json",
-]
-
-[[package]]
-name = "uf-valence-telemetry"
-version = "0.1.5"
-source = "git+https://github.com/deathbreakfast/valence?branch=main#cf439f50caed958e71873b6dd50a7519bdbc6151"
-dependencies = [
- "serde_json",
 ]
 
 [[package]]
@@ -6554,7 +6331,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6943,6 +6720,21 @@ dependencies = [
  "log",
  "simd-adler32",
 ]
+
+[[patch.unused]]
+name = "uf-valence-backend-hybrid"
+version = "0.1.5"
+source = "git+https://github.com/unified-field-dev/valence?branch=main#fa4d8002ca4e0567b484ed39ae0f076e5cb84820"
+
+[[patch.unused]]
+name = "uf-valence-backend-indradb"
+version = "0.1.5"
+source = "git+https://github.com/unified-field-dev/valence?branch=main#fa4d8002ca4e0567b484ed39ae0f076e5cb84820"
+
+[[patch.unused]]
+name = "uf-valence-backend-postgres"
+version = "0.1.5"
+source = "git+https://github.com/unified-field-dev/valence?branch=main#fa4d8002ca4e0567b484ed39ae0f076e5cb84820"
 
 [[patch.unused]]
 name = "lepton-smtp"

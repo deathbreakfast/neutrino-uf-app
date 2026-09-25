@@ -121,10 +121,27 @@ gauge = { git = "https://github.com/deathbreakfast/gauge", branch = "main" }
 
 # Until scope_prefix list filter + dual-reg schema fixes land on uf-dev.
 [patch."https://github.com/unified-field-dev/neutrino"]
-neutrino = { git = "https://github.com/deathbreakfast/neutrino", branch = "main" }
+neutrino = { path = "../../L3-zone-products/neutrino/neutrino" }
+neutrino-spectra-telemetry = { path = "../../L3-zone-products/neutrino/neutrino-spectra-telemetry" }
 
 [patch."https://github.com/unified-field-dev/uf-notifications"]
 uf-notifications-core = { git = "https://github.com/deathbreakfast/uf-notifications", branch = "main" }
+
+# deathbreakfast gauge/notifications declare Valence via deathbreakfast git URL; unify onto
+# the same uf-dev Valence package so cross-crate Model bounds (e.g. User) resolve.
+[patch."https://github.com/deathbreakfast/valence"]
+uf-valence = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-core = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-codegen = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-macros = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-telemetry = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-backend-mem = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-backend-sqlite = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-backend-sql = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-schema-dsl = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-backend-postgres = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-backend-hybrid = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
+uf-valence-backend-indradb = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
 
 # Kits may still declare Valence/Orbital via crates.io; unify onto uf-dev git.
 [patch.crates-io]
