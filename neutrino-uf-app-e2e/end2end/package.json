@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "wait-server": "wait-on -t 300000 -i 500 -l http-get://localhost:3160/health",
+    "wait-server": "wait-on -t 300000 -i 500 -l http-get://localhost:3160/health http-get://localhost:3160/pkg/neutrino-uf-app-e2e.js",
     "test": "npm run wait-server && npx playwright test --workers=1",
     "test:headed": "npm run wait-server && PW_HEADED=1 npx playwright test --workers=1 --headed"
   },

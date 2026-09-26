@@ -37,7 +37,7 @@ Authz (outsider read-only): `pw-vault-write-denied-sad`, `pw-vault-reveal-denied
 
 Partial role (requestor: read+write+rotate, no reveal): `pw-vault-requestor-mutate-happy`, `pw-vault-requestor-reveal-denied-sad`
 
-ACL placeholder route: `pw-vault-acl-placeholder-happy`
+ACL manage route: `pw-vault-acl-manage-happy`
 
 Help spotlight: `help-spotlight-skips-when-seeded`, `help-spotlight-skips-auth-gate`,
 `help-spotlight-green-/secrets`, `help-spotlight-green-/secrets/acl`
@@ -48,6 +48,6 @@ Help spotlight: `help-spotlight-skips-when-seeded`, `help-spotlight-skips-auth-g
 
 | ID | Why deferred |
 |----|--------------|
-| ACL grant editing UI | Placeholder page only — route smoke covers `/secrets/acl`; grant matrix not shipped |
+| ACL grant/revoke click matrix | Route + form smoke covers `/secrets/acl`; full grant→revoke Playwright flow deferred |
 | Lepton MFA / OAuth / confirm | Owned by `lepton-auth-ui-e2e` / `lepton-uf-app-e2e` |
 | Chronon / Boson / Photon IsolatedLab | Broader host platform composition, not Neutrino UI |

@@ -11,8 +11,8 @@
 //!    named permission on the request actor.
 //! 2. **Valence privacy** — session [`higgs::Higgs::valence`] drives ORM access; Neutrino
 //!    schemas enforce per-secret Gauge grants inside Valence (no mid-request System elevate).
-//! 3. **Per-secret bridge** — [`neutrino::VaultAccessContext`] remains a compat fallback
-//!    where Gauge bundles were skipped (control-plane seals).
+//! 3. **Per-secret Gauge** — vault helpers authorize via the store's request actor
+//!    (`actor_can_secret` / Valence privacy policies).
 //! 4. **Audit** — success rows append under the session actor; denials use a System sink.
 
 use leptos::prelude::*;
@@ -56,6 +56,13 @@ pub struct RevealedVaultSecret {
     pub plaintext_b64: String,
 }
 
+pub(crate) mod grants;
+
+pub use grants::{
+    grant_secret_action, list_secret_grants, revoke_secret_action, SecretActionGrant,
+    SecretGrantPrincipal,
+};
+
 /// Permission names enforced by vault `#[server]` wrappers.
 #[cfg(feature = "ssr")]
 pub mod vault_permissions {
@@ -73,7 +80,9 @@ pub mod vault_permissions {
 }
 
 #[cfg(feature = "ssr")]
-fn session_valence_from_ctx(ctx: &higgs::Higgs) -> Result<valence::Valence, ServerFnError> {
+pub(crate) fn session_valence_from_ctx(
+    ctx: &higgs::Higgs,
+) -> Result<valence::Valence, ServerFnError> {
     ctx.valence()
         .map_err(|e| ServerFnError::new(format!("Failed to build request Valence: {e}")))
 }
@@ -107,32 +116,6 @@ fn actor_owner_label(actor: Actor) -> String {
 #[cfg(feature = "ssr")]
 const INTERNAL_VAULT_ERROR: &str = "An internal vault error occurred. Check server logs.";
 
-/// Build vault access context: owner match + optional Super User break-glass `/`.
-#[cfg(feature = "ssr")]
-async fn vault_access_from_ctx(
-    ctx: &higgs::Higgs,
-) -> Result<neutrino::VaultAccessContext, ServerFnError> {
-    let actor_label = actor_owner_label(ctx.actor());
-    let user_v = session_valence_from_ctx(ctx)?;
-    vault_access_for_actor(&user_v, actor_label).await
-}
-
-/// Maps session Valence + actor label to [`neutrino::VaultAccessContext`].
-#[cfg(feature = "ssr")]
-async fn vault_access_for_actor(
-    user_v: &valence::Valence,
-    actor_label: String,
-) -> Result<neutrino::VaultAccessContext, ServerFnError> {
-    let is_super = gauge::super_user::actor_is_super_user(user_v)
-        .await
-        .map_err(|e| ServerFnError::new(format!("Failed to evaluate Super User access: {e}")))?;
-    if is_super {
-        Ok(neutrino::VaultAccessContext::break_glass(actor_label))
-    } else {
-        Ok(neutrino::VaultAccessContext::owner_only(actor_label))
-    }
-}
-
 #[cfg(feature = "ssr")]
 #[allow(clippy::needless_pass_by_value)] // `map_err(map_neutrino_error)` needs owned Err
 fn map_neutrino_error(err: neutrino::NeutrinoError) -> ServerFnError {
@@ -140,7 +123,8 @@ fn map_neutrino_error(err: neutrino::NeutrinoError) -> ServerFnError {
     match &err {
         NeutrinoError::NotFound { .. }
         | NeutrinoError::AccessDenied { .. }
-        | NeutrinoError::Validation { .. } => ServerFnError::new(err.to_string()),
+        | NeutrinoError::Validation { .. }
+        | NeutrinoError::InvalidState { .. } => ServerFnError::new(err.to_string()),
         NeutrinoError::Config(_)
         | NeutrinoError::Crypto { .. }
         | NeutrinoError::Unsupported { .. }
@@ -199,6 +183,12 @@ mod tests {
             message: "required".into(),
         });
         assert!(validation.to_string().contains("required"));
+
+        let invalid = map_neutrino_error(NeutrinoError::InvalidState {
+            operation: "lease",
+            message: "archived only".into(),
+        });
+        assert!(invalid.to_string().contains("archived only"));
     }
 
     #[test]
@@ -239,14 +229,13 @@ pub async fn neutrino_vault_ping() -> Result<(), ServerFnError> {
 pub async fn list_vault_secrets() -> Result<Vec<VaultSecretRow>, ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let access = vault_access_from_ctx(&ctx).await?;
-    neutrino::list_vault_secrets(&session_v, &access)
+    neutrino::list_vault_secrets(&session_v, None)
         .await
         .map_err(map_neutrino_error)
 }
 
 /// Creates a new secret (version 1).
-#[uf_product_macros::server(permission = "SecretsWrite")]
+#[uf_product_macros::server(permission = "SecretsWrite", step_up)]
 pub async fn create_vault_secret(
     /// Human-readable secret name.
     name: String,
@@ -267,37 +256,54 @@ pub async fn create_vault_secret(
 }
 
 /// Returns the current version plaintext (base64). Never persisted client-side.
-#[uf_product_macros::server(permission = "SecretsReveal")]
+#[uf_product_macros::server(permission = "SecretsReveal", step_up = "fresh")]
 pub async fn reveal_vault_secret(
     /// Unique identifier of the secret to reveal.
     id: String,
+    /// Fresh TOTP code required for reveal (including Super User break-glass).
+    totp_code: String,
 ) -> Result<RevealedVaultSecret, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        #[cfg(feature = "e2e-lab")]
+        {
+            crate::e2e_lab::verify_fresh_totp(&totp_code).await?;
+        }
+        #[cfg(not(feature = "e2e-lab"))]
+        {
+            lepton_auth::verify_fresh_totp(&totp_code)
+                .await
+                .map_err(|e| e.to_server_fn_error())?;
+        }
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let _ = totp_code;
+    }
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let access = vault_access_from_ctx(&ctx).await?;
     let store = store_for_request(&ctx, session_v);
-    neutrino::reveal_vault_secret(&store, id, &access)
+    neutrino::reveal_vault_secret(&store, id)
         .await
         .map_err(map_neutrino_error)
 }
 
 /// Deletes a secret and all versions (hard delete with prior audit event in Neutrino).
-#[uf_product_macros::server(permission = "SecretsWrite")]
+#[uf_product_macros::server(permission = "SecretsWrite", step_up)]
 pub async fn delete_vault_secret(
     /// Unique identifier of the secret to delete.
     id: String,
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let access = vault_access_from_ctx(&ctx).await?;
     let store = store_for_request(&ctx, session_v);
-    neutrino::delete_vault_secret(&store, id, &access)
+    neutrino::delete_vault_secret(&store, id)
         .await
         .map_err(map_neutrino_error)
 }
 
-/// Rotates ciphertext to a new version (Photon / Gluon bootstrap publish is deferred).
-#[uf_product_macros::server(permission = "SecretsRotate")]
+/// Rotates ciphertext to a new version (publishes Photon event when DB-scoped).
+#[uf_product_macros::server(permission = "SecretsRotate", step_up)]
 pub async fn rotate_vault_secret(
     /// Unique identifier of the secret to rotate.
     id: String,
@@ -307,18 +313,50 @@ pub async fn rotate_vault_secret(
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
     let actor = actor_owner_label(ctx.actor());
-    let access = vault_access_from_ctx(&ctx).await?;
     let store = store_for_request(&ctx, session_v);
     let secret_id = id.clone();
-    let row = neutrino::rotate_vault_secret(&store, id, new_plaintext, actor.as_str(), &access)
+    let row = neutrino::rotate_vault_secret(&store, id, new_plaintext, actor.as_str())
         .await
         .map_err(map_neutrino_error)?;
 
-    tracing::debug!(
-        target: "neutrino_app",
-        secret_id = %secret_id,
-        "vault rotate complete (Photon publish deferred)"
-    );
+    // Live L4: DB-scoped rotates publish `neutrino.secret.rotated` for Gluon apply.
+    // Non-DB scopes (provider tokens, etc.) stay quiet — no mid-request System elevate.
+    match neutrino::publish_if_db_scoped_secret_rotated(
+        &row.id,
+        row.current_version,
+        None,
+        &row.scope_path,
+        format!("vault_rotate:{}:{}", row.id, row.current_version),
+    )
+    .await
+    {
+        Ok(true) => {
+            tracing::info!(
+                target: "neutrino_app",
+                secret_id = %secret_id,
+                version = row.current_version,
+                "vault rotate published neutrino.secret.rotated"
+            );
+        }
+        Ok(false) => {
+            tracing::debug!(
+                target: "neutrino_app",
+                secret_id = %secret_id,
+                "vault rotate complete (non-DB scope; Photon publish skipped)"
+            );
+        }
+        Err(e) => {
+            tracing::error!(
+                target: "neutrino_app",
+                secret_id = %secret_id,
+                error = %e,
+                "vault rotate succeeded but Photon publish failed"
+            );
+            return Err(ServerFnError::new(format!(
+                "secret rotated but notify failed (DB-scoped apply not queued): {e}"
+            )));
+        }
+    }
 
     Ok(row)
 }

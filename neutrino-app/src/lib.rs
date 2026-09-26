@@ -12,8 +12,11 @@
 //!   expose list, create, reveal, rotate, and delete pages at `/secrets`, gated
 //!   by an authenticated verified session. Mount once when composing the host
 //!   route tree at startup. [Get started](#mount-neutrino-routes).
+//! - **Fresh-code reveal** — Break-glass plaintext reveal takes an explicit TOTP
+//!   code and `step_up = "fresh"` so a sudo window alone is not enough.
+//!   [Get started](#reveal-with-a-fresh-code).
 //! - **Help spotlight tours** — Route-scoped Orbital spotlights that teach the
-//!   vault list and ACL placeholder. Call [`ensure_help_steps_linked`] so inventory
+//!   vault list and ACL manage page. Call [`ensure_help_steps_linked`] so inventory
 //!   links into the host; enable `offering-help` on the product shell.
 //!   [Get started](#help-spotlight-tours).
 //!
@@ -27,7 +30,7 @@
 //! | Module | Role |
 //! |--------|------|
 //! | [`layout`] | Orbital shell (app bar + nav) wrapping routed pages |
-//! | [`pages`] | Vault list and ACL placeholder route pages |
+//! | [`pages`] | Vault list and ACL manage route pages |
 //! | [`mod@help_steps`] | Help spotlight tour inventory; call [`ensure_help_steps_linked`] |
 //! | [`mod@server`] | Higgs `#[server]` wrappers over `neutrino::vault` |
 //! | [`permissions`] | `Secrets*` permission manifest for host registration |
@@ -43,12 +46,11 @@
 //! ## Mount Neutrino routes
 //!
 //! [`NeutrinoRoutes`] is the Orbital route tree for the Secrets app: vault list and
-//! ACL placeholder pages nested under an authenticated+verified guard. Mount it
+//! ACL manage pages nested under an authenticated+verified guard. Mount it
 //! once when building the host Axum/Leptos router at startup, after session chrome
 //! and identity are available. Server functions are gated per-action by
 //! [`permissions::NeutrinoPermission`] (`SecretsRead`, `SecretsReveal`,
-//! `SecretsWrite`, `SecretsRotate`, plus reserved grant/audit/master-key
-//! capabilities).
+//! `SecretsWrite`, `SecretsRotate`, `SecretsGrantManage`).
 //!
 //! **Prerequisites:** Valence, Lepton session, and Higgs on the host; `neutrino`
 //! and `neutrino-app` with `feature = "ssr"` on the server binary (and `hydrate`
@@ -78,7 +80,7 @@
 //! }
 //! ```
 //!
-//! On success `/secrets` resolves to the vault list (ACL placeholder at
+//! On success `/secrets` resolves to the vault list (ACL manage at
 //! `/secrets/acl`). Without `feature = "ssr"` on the server binary, server fns
 //! do not compile into the host. Without an authenticated verified session, the
 //! guard does not render vault pages (operators see the host login / verify
@@ -95,10 +97,44 @@
 //! `ssr`, list/create/reveal calls fail at the Leptos server-fn boundary rather than
 //! at route mount.
 //!
+//! ## Reveal with a fresh code
+//!
+//! Break-glass plaintext reveal is stronger than other Tier A vault mutations. The
+//! server fn uses `step_up = "fresh"` and takes an explicit `totp_code` so an open
+//! sudo window alone cannot unlock secret material. Operators enter a code in the
+//! reveal UI; the handler calls `lepton_auth::verify_fresh_totp` (or the e2e-lab
+//! substitute) before `neutrino::reveal_vault_secret`.
+//!
+//! **Prerequisites:** Mounted [`NeutrinoRoutes`], `SecretsReveal` Gauge grant, enrolled
+//! TOTP, and `ssr` on the host. Routine create/rotate/delete use window `step_up`
+//! instead (see [`mod@server`]).
+//!
+//! ```rust,ignore
+//! use leptos::prelude::*;
+//!
+//! // Expands with permission + step_up = "fresh"; handler still verifies the code.
+//! #[uf_product_macros::server(permission = "SecretsReveal", step_up = "fresh")]
+//! pub async fn reveal_vault_secret(
+//!     id: String,
+//!     totp_code: String,
+//! ) -> Result<String, ServerFnError> {
+//!     lepton_auth::verify_fresh_totp(&totp_code)
+//!         .await
+//!         .map_err(|e| ServerFnError::new(format!("STEP_UP:{e}")))?;
+//!     // neutrino::reveal_vault_secret(...).await.map_err(...)
+//!     Ok(id)
+//! }
+//! ```
+//!
+//! Missing or wrong codes return a `STEP_UP:` [`ServerFnError`]. A valid sudo window
+//! without a fresh code still fails. List metadata stays on `SecretsRead` without
+//! step-up. Next: [Mount Neutrino routes](#mount-neutrino-routes) or lepton-auth
+//! `verify_fresh_totp`.
+//!
 //! ## Help spotlight tours
 //!
 //! Secrets ships Orbital Help spotlights for the vault list (`/secrets`) and ACL
-//! placeholder (`/secrets/acl`). Hosts that enable `offering-help` (or `full`) mount
+//! manage page (`/secrets/acl`). Hosts that enable `offering-help` (or `full`) mount
 //! `HelpTourPlayer`. Call [`ensure_help_steps_linked`] once at host startup (when
 //! mounting routes) so `inventory` submissions from [`mod@help_steps`] are retained
 //! and tours can run.
@@ -156,6 +192,10 @@ pub mod permissions;
 pub mod server;
 pub mod shell;
 
+/// IsolatedLab fresh-TOTP helpers (enabled with Cargo feature `e2e-lab`).
+#[cfg(feature = "e2e-lab")]
+pub mod e2e_lab;
+
 pub use help_steps::ensure_help_steps_linked;
 pub use layout::NeutrinoAppLayout;
 pub use lazy_routes::{
@@ -175,7 +215,7 @@ uf_app! {
     permission_manifest: permissions::NeutrinoPermission,
 }
 
-/// Route tree for the Secrets app: vault list and ACL placeholder pages, nested
+/// Route tree for the Secrets app: vault list and ACL manage pages, nested
 /// under an authenticated+verified guard.
 // `orbital_routes_extract` emits helper items without docs.
 #[orbital_macros::orbital_routes_extract]

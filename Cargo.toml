@@ -111,8 +111,12 @@ uf-help = { git = "https://github.com/unified-field-dev/unified-field-product", 
 uf-help-macros = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main" }
 uf-product-macros = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main" }
 lepton-shell = { git = "https://github.com/unified-field-dev/lepton-uf-app", branch = "main", default-features = false }
+lepton-auth = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
+lepton-auth-ui = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
+totp-rs = { version = "5.7", default-features = false }
 
-# Kits may still declare Valence/Orbital via crates.io; unify onto uf-dev git.
+# Unify crates.io uf-valence / chronon / orbital onto uf-dev git
+# (avoids duplicate ThemeInjection / Valence types — lepton-auth-ui pulls crates.io orbital).
 [patch.crates-io]
 uf-valence = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
 uf-valence-core = { git = "https://github.com/unified-field-dev/valence", branch = "main" }
@@ -146,3 +150,4 @@ orbital-discussion = { git = "https://github.com/unified-field-dev/orbital", bra
 orbital-history = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
 orbital-markdown = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
 orbital-style = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
+

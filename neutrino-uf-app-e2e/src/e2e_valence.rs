@@ -59,7 +59,33 @@ fn prepare_env() {
         // placeholder that would otherwise skip this branch and panic at boot.
         std::env::set_var("NEUTRINO_MASTER_KEY", "0".repeat(64));
         std::env::remove_var("NEUTRINO_ALLOW_WEAK_MASTER_KEY");
+        // Lab TOTP seal key for step-up verify / lazy re-seal.
+        std::env::set_var("LEPTON_TOTP_ALLOW_TEST_SEAL_KEY", "1");
     }
+}
+
+/// RFC 6238 fixture secret seeded onto e2e users (matches `neutrino_app::e2e_lab`).
+pub const HARNESS_TOTP_SECRET: &str = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
+
+async fn seed_enabled_totp(user_id: &str, valence: &Valence) {
+    let now = Utc::now();
+    let factor_id = format!("totp-{user_id}");
+    let user_rec = valence::RecordId::new("user", user_id);
+    let factor = lepton::generated::TotpFactor::new(
+        user_rec,
+        HARNESS_TOTP_SECRET.to_string(),
+        None,
+        None,
+        None,
+        Some(now),
+        Some(now),
+        now,
+        now,
+    )
+    .expect("totp factor");
+    lepton::generated::TotpFactor::upsert(&factor_id, factor, valence, valence::use_!(r#"**Test:** Fixture **Totp Factor** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
+        .await
+        .expect("upsert totp");
 }
 
 async fn seed_user(id: &str, email_verified: bool, valence: &Valence) {
@@ -78,17 +104,17 @@ async fn seed_user(id: &str, email_verified: bool, valence: &Valence) {
         now,
     )
     .expect("build user");
-    lepton::generated::User::upsert(id, user, valence)
+    lepton::generated::User::upsert(id, user, valence, valence::use_!(r#"**Test:** Fixture **User** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("upsert user");
 }
 
 async fn add_user_to_creators_group(user_id: &str, v: &Valence) {
-    let group = gauge::generated::PermissionGroup::get("neutrino.secret.creators", v)
+    let group = gauge::generated::PermissionGroup::get("neutrino.secret.creators", v, valence::use_!(r#"**Test:** Fixture **Permission Group** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get creators group")
         .expect("neutrino.secret.creators");
-    let user = lepton::generated::User::get(user_id, v)
+    let user = lepton::generated::User::get(user_id, v, valence::use_!(r#"**Test:** Fixture **User** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get user")
         .expect("user row");
@@ -100,11 +126,16 @@ async fn add_user_to_creators_group(user_id: &str, v: &Valence) {
         )
         .expect("principal"),
         v,
+        valence::use_!(r#"**Test:** Fixture **Permission User Principal** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
     )
     .await
     .expect("upsert principal");
     group
-        .relate_to_member_record(principal.id().expect("principal id"), v)
+        .relate_to_member_record(
+            principal.id().expect("principal id"),
+            v,
+            valence::use_!(r#"**Test:** Fixture **Permission Group** member edge for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
+        )
         .await
         .expect("relate member");
 }
@@ -118,11 +149,11 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
     )
     .expect("build super user group");
     let created =
-        gauge::generated::PermissionGroup::upsert("super_user_group", super_group, system)
+        gauge::generated::PermissionGroup::upsert("super_user_group", super_group, system, valence::use_!(r#"**Test:** Fixture **Permission Group** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
             .await
             .expect("upsert super user group");
 
-    let member = lepton::generated::User::get(member_user_id, system)
+    let member = lepton::generated::User::get(member_user_id, system, valence::use_!(r#"**Test:** Fixture **User** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("query member")
         .expect("member exists");
@@ -134,35 +165,61 @@ async fn seed_super_user_with_member(system: &Valence, member_user_id: &str) {
         )
         .expect("new principal"),
         system,
+        valence::use_!(r#"**Test:** Fixture **Permission User Principal** save for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
     )
     .await
     .expect("upsert principal");
     created
-        .relate_to_owner_record(principal.id().expect("principal id"), system)
+        .relate_to_owner_record(
+            principal.id().expect("principal id"),
+            system,
+            valence::use_!(r#"**Test:** Fixture **Permission Group** owner edge for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
+        )
         .await
         .expect("relate super owner");
     created
-        .relate_to_member_record(principal.id().expect("principal id"), system)
+        .relate_to_member_record(
+            principal.id().expect("principal id"),
+            system,
+            valence::use_!(r#"**Test:** Fixture **Permission Group** member edge for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
+        )
         .await
         .expect("relate super member");
 }
 
 async fn demote_admin_from_super_user(system: &Valence) {
-    let Some(super_group) = gauge::generated::PermissionGroup::get("super_user_group", system)
+    let Some(super_group) = gauge::generated::PermissionGroup::get("super_user_group", system, valence::use_!(r#"**Test:** Fixture **Permission Group** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get super user group")
     else {
         return;
     };
-    let Some(principal) = gauge::generated::PermissionUserPrincipal::get("user:admin", system)
+    let Some(principal) = gauge::generated::PermissionUserPrincipal::get("user:admin", system, valence::use_!(r#"**Test:** Fixture **Permission User Principal** load for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#))
         .await
         .expect("get admin principal")
     else {
         return;
     };
     let pid = principal.id().expect("principal id").clone();
-    let _ = super_group.unrelate_from_member_record(&pid, system).await;
-    let _ = super_group.unrelate_from_owner_record(&pid, system).await;
+    let _ = super_group
+        .unrelate_from_member_record(
+            &pid,
+            system,
+            valence::use_!(r#"**Test:** Fixture **Permission Group** member edge remove for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
+        )
+        .await;
+    let _ = super_group
+        .unrelate_from_owner_record(
+            &pid,
+            system,
+            valence::use_!(r#"**Test:** Fixture **Permission Group** owner edge remove for `e2e_valence` so the suite can arrange and assert persistence behavior. CI and developers running the suite only."#),
+        )
+        .await;
+}
+
+/// Lab seed: put admin back on Super User (break-glass reveal paths).
+pub async fn promote_admin_to_super_user(system: &Valence) {
+    seed_super_user_with_member(system, "admin").await;
 }
 
 fn secrets_manifest() -> PermissionManifestInput {
@@ -188,6 +245,10 @@ fn secrets_manifest() -> PermissionManifestInput {
                 PermissionInput {
                     name: "SecretsRotate".into(),
                     description: "Trigger rotation".into(),
+                },
+                PermissionInput {
+                    name: "SecretsGrantManage".into(),
+                    description: "Manage ACLs on secrets".into(),
                 },
             ],
         }],
@@ -250,6 +311,10 @@ pub async fn init_e2e_valence() {
     seed_user("outsider", true, &system).await;
     seed_user("unverified", false, &system).await;
 
+    seed_enabled_totp("admin", &system).await;
+    seed_enabled_totp("requestor", &system).await;
+    seed_enabled_totp("outsider", &system).await;
+
     add_user_to_creators_group("admin", &system).await;
     add_user_to_creators_group("requestor", &system).await;
     add_user_to_creators_group("outsider", &system).await;
@@ -269,6 +334,7 @@ pub async fn init_e2e_valence() {
         "SecretsReveal",
         "SecretsWrite",
         "SecretsRotate",
+        "SecretsGrantManage",
     ] {
         grant_named(&admin_ctx, name, "admin").await;
     }

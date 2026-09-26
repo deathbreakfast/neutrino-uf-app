@@ -30,10 +30,4 @@ pub enum NeutrinoPermission {
     /// Manage ACLs/grants on secrets.
     #[permission(description = "Manage ACLs on secrets")]
     SecretsGrantManage,
-    /// View secret audit events.
-    #[permission(description = "View audit events")]
-    SecretsAuditView,
-    /// Manage master key reseal operations.
-    #[permission(description = "Manage master key reseal")]
-    SecretsMasterKeyManage,
 }

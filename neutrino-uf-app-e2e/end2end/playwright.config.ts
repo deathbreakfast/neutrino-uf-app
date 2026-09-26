@@ -4,6 +4,7 @@ const headed = !!process.env.PW_HEADED;
 
 export default defineConfig({
   testDir: "./tests",
+  globalSetup: require.resolve("./global-setup.ts"),
   timeout: 300_000,
   expect: { timeout: 60_000 },
   fullyParallel: false,
