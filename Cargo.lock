@@ -2819,6 +2819,7 @@ dependencies = [
  "http",
  "icondata",
  "icondata_core",
+ "lepton",
  "lepton-auth",
  "lepton-auth-ui",
  "lepton-shell",

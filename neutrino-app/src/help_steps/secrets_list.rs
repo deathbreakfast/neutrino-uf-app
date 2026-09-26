@@ -211,7 +211,7 @@ pub fn SecretsNavSecretsHelp() -> impl IntoView {
 pub fn SecretsNavAclHelp() -> impl IntoView {
     help_stack(
         "help-step-secrets-nav-acl",
-        "ACLs opens the sharing page (placeholder today). A short tour starts there.",
+        "ACLs opens the sharing page where you grant or revoke access per secret. A short tour starts there.",
         Some("Help, then Replay, restarts this page's tour."),
         &[],
     )

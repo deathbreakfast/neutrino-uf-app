@@ -36,6 +36,7 @@ uf-integrations = { workspace = true, default-features = false }
 uf-search-core = { workspace = true, default-features = false }
 uf-help = { workspace = true, default-features = false }
 uf-help-macros = { workspace = true }
+lepton = { workspace = true, optional = true, default-features = false }
 lepton-shell = { workspace = true, default-features = false }
 lepton-auth = { workspace = true, default-features = false }
 lepton-auth-ui = { workspace = true, default-features = false }
@@ -55,6 +56,9 @@ totp-rs = { workspace = true, optional = true }
 default = []
 # Lab-only: IsolatedLab fresh TOTP without axum-login (neutrino-uf-app-e2e).
 e2e-lab = ["dep:totp-rs"]
+# SSR host only — clears TotpFactor same-step replay between Playwright reveals.
+# Do not enable from hydrate (would pull lepton/ssr into wasm).
+e2e-lab-ssr = ["e2e-lab", "dep:lepton", "lepton/ssr"]
 hydrate = [
     "leptos/hydrate",
     "uf-product/hydrate",

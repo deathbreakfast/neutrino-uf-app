@@ -74,6 +74,48 @@ pub async fn e2e_lab_totp_code() -> Result<String, ServerFnError> {
     }
 }
 
+/// Reset the session user's harness `TotpFactor` so `last_used_step` is clear.
+///
+/// Shared in-memory Valence + lepton same-step replay would otherwise fail a second
+/// (or cross-test) fresh reveal within the same TOTP window. Lab harness only.
+#[cfg(all(feature = "ssr", feature = "e2e-lab-ssr"))]
+async fn clear_lab_totp_replay_guard(session_uid: &str) -> Result<(), ServerFnError> {
+    use chrono::Utc;
+    use valence::Model;
+
+    let ctx = higgs::Higgs::from_request()
+        .await
+        .map_err(|_| ServerFnError::new("STEP_UP:auth_required: authentication required"))?;
+    // TotpFactor is SYSTEM_ONLY — same path as lepton_auth verify. Test harness only.
+    let system = ctx
+        .unsafe_system_valence()
+        .map_err(|_| ServerFnError::new("STEP_UP:store: system valence unavailable"))?;
+    let bare = session_uid.split(':').next_back().unwrap_or(session_uid);
+    let factor_id = format!("totp-{bare}");
+    let now = Utc::now();
+    let factor = lepton::generated::TotpFactor::new(
+        valence::RecordId::new("user", bare),
+        HARNESS_TOTP_SECRET.to_string(),
+        None,
+        None,
+        None,
+        Some(now),
+        Some(now),
+        now,
+        now,
+    )
+    .map_err(|e| ServerFnError::new(format!("STEP_UP:store: {e}")))?;
+    lepton::generated::TotpFactor::upsert_used(
+        &factor_id,
+        factor,
+        &system,
+        valence::use_!(r#"**Test:** Lab **Totp Factor** re-seed clears last_used_step so consecutive Playwright fresh reveals can reuse the fixture TOTP within one 30s window. CI and developers running the suite only."#),
+    )
+    .await
+    .map_err(|e| ServerFnError::new(format!("STEP_UP:store: {e}")))?;
+    Ok(())
+}
+
 /// Verify a fresh TOTP for the Higgs session user (lab substitute for axum-login).
 #[cfg(feature = "ssr")]
 pub async fn verify_fresh_totp(code: &str) -> Result<(), ServerFnError> {
@@ -88,6 +130,8 @@ pub async fn verify_fresh_totp(code: &str) -> Result<(), ServerFnError> {
     let session_uid = ctx
         .session_user_id()
         .ok_or_else(|| ServerFnError::new("STEP_UP:auth_required: authentication required"))?;
+    #[cfg(feature = "e2e-lab-ssr")]
+    clear_lab_totp_replay_guard(session_uid).await?;
     lepton_auth::verify_fresh_totp_for_session_user(session_uid, code)
         .await
         .map_err(|e| e.to_server_fn_error())

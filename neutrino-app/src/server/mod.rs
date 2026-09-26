@@ -346,12 +346,15 @@ pub async fn rotate_vault_secret(
             );
         }
         Err(e) => {
-            tracing::warn!(
+            tracing::error!(
                 target: "neutrino_app",
                 secret_id = %secret_id,
                 error = %e,
                 "vault rotate succeeded but Photon publish failed"
             );
+            return Err(ServerFnError::new(format!(
+                "secret rotated but notify failed (DB-scoped apply not queued): {e}"
+            )));
         }
     }
 

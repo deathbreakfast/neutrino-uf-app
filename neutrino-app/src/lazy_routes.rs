@@ -38,7 +38,7 @@ impl LazyRoute for SecretsListRoute {
     }
 }
 
-/// Lazy `/secrets/acl` ACL placeholder page.
+/// Lazy `/secrets/acl` ACL manage page.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AclManageRoute;
 

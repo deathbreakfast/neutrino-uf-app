@@ -65,7 +65,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "neutrino-app/ssr",
-    "neutrino-app/e2e-lab",
+    "neutrino-app/e2e-lab-ssr",
     "uf-product/ssr",
     "uf-integrations/ssr",
     "uf-integrations/offering-help",

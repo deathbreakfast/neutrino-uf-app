@@ -16,7 +16,7 @@
 //!   code and `step_up = "fresh"` so a sudo window alone is not enough.
 //!   [Get started](#reveal-with-a-fresh-code).
 //! - **Help spotlight tours** — Route-scoped Orbital spotlights that teach the
-//!   vault list and ACL placeholder. Call [`ensure_help_steps_linked`] so inventory
+//!   vault list and ACL manage page. Call [`ensure_help_steps_linked`] so inventory
 //!   links into the host; enable `offering-help` on the product shell.
 //!   [Get started](#help-spotlight-tours).
 //!
@@ -30,7 +30,7 @@
 //! | Module | Role |
 //! |--------|------|
 //! | [`layout`] | Orbital shell (app bar + nav) wrapping routed pages |
-//! | [`pages`] | Vault list and ACL placeholder route pages |
+//! | [`pages`] | Vault list and ACL manage route pages |
 //! | [`mod@help_steps`] | Help spotlight tour inventory; call [`ensure_help_steps_linked`] |
 //! | [`mod@server`] | Higgs `#[server]` wrappers over `neutrino::vault` |
 //! | [`permissions`] | `Secrets*` permission manifest for host registration |
@@ -46,12 +46,11 @@
 //! ## Mount Neutrino routes
 //!
 //! [`NeutrinoRoutes`] is the Orbital route tree for the Secrets app: vault list and
-//! ACL placeholder pages nested under an authenticated+verified guard. Mount it
+//! ACL manage pages nested under an authenticated+verified guard. Mount it
 //! once when building the host Axum/Leptos router at startup, after session chrome
 //! and identity are available. Server functions are gated per-action by
 //! [`permissions::NeutrinoPermission`] (`SecretsRead`, `SecretsReveal`,
-//! `SecretsWrite`, `SecretsRotate`, plus reserved grant/audit/master-key
-//! capabilities).
+//! `SecretsWrite`, `SecretsRotate`, `SecretsGrantManage`).
 //!
 //! **Prerequisites:** Valence, Lepton session, and Higgs on the host; `neutrino`
 //! and `neutrino-app` with `feature = "ssr"` on the server binary (and `hydrate`
@@ -81,7 +80,7 @@
 //! }
 //! ```
 //!
-//! On success `/secrets` resolves to the vault list (ACL placeholder at
+//! On success `/secrets` resolves to the vault list (ACL manage at
 //! `/secrets/acl`). Without `feature = "ssr"` on the server binary, server fns
 //! do not compile into the host. Without an authenticated verified session, the
 //! guard does not render vault pages (operators see the host login / verify
@@ -135,7 +134,7 @@
 //! ## Help spotlight tours
 //!
 //! Secrets ships Orbital Help spotlights for the vault list (`/secrets`) and ACL
-//! placeholder (`/secrets/acl`). Hosts that enable `offering-help` (or `full`) mount
+//! manage page (`/secrets/acl`). Hosts that enable `offering-help` (or `full`) mount
 //! `HelpTourPlayer`. Call [`ensure_help_steps_linked`] once at host startup (when
 //! mounting routes) so `inventory` submissions from [`mod@help_steps`] are retained
 //! and tours can run.
@@ -216,7 +215,7 @@ uf_app! {
     permission_manifest: permissions::NeutrinoPermission,
 }
 
-/// Route tree for the Secrets app: vault list and ACL placeholder pages, nested
+/// Route tree for the Secrets app: vault list and ACL manage pages, nested
 /// under an authenticated+verified guard.
 // `orbital_routes_extract` emits helper items without docs.
 #[orbital_macros::orbital_routes_extract]

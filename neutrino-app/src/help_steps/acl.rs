@@ -65,7 +65,7 @@ pub fn SecretsAclSecretSelectHelp() -> impl IntoView {
     route = "/secrets/acl",
     feature_highlight = "secrets-acl-grant-form",
     title = "Add a grant",
-    spotlight = "secrets-acl-grant-form",
+    spotlight = "secrets-acl-secret-select",
     position = "top",
     order = 40
 )]
@@ -73,7 +73,7 @@ pub fn SecretsAclSecretSelectHelp() -> impl IntoView {
 pub fn SecretsAclGrantFormHelp() -> impl IntoView {
     help_stack(
         "help-step-secrets-acl-grant-form",
-        "Enter a user id and pick an action. Reveal and Maintain ask for a fresh authenticator code.",
+        "After you pick a secret, enter a user id and an action. Reveal and Maintain ask for a fresh authenticator code.",
         None,
         &[],
     )

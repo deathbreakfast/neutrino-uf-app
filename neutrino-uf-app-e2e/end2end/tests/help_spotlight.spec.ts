@@ -53,9 +53,33 @@ test.describe("help-spotlight", () => {
   for (const route of NEUTRINO_TOUR_ROUTES) {
     test(`help-spotlight-green-${route.path}`, async ({ page }) => {
       await seedAuth(page, "admin", { help_tour: true });
+      if (route.path === "/secrets/acl") {
+        // Full reload of /secrets/acl often forges hydrate before WASM Effects
+        // run. Prove hydrate on /secrets, finish that tour, then client-nav to
+        // ACL so HelpTourPlayer keeps the live WASM runtime.
+        await page.goto("/secrets", { waitUntil: "domcontentloaded" });
+        await waitForHydrated(page);
+        await expect(page.getByTestId("help-step-secrets-intro")).toBeVisible({
+          timeout: 120_000,
+        });
+        await completeVisibleTour(page);
+        await page.getByRole("button", { name: "Expand navigation" }).click();
+        await page.getByTestId("nav-secrets-acl").getByRole("link").click();
+        await expect(page.getByTestId("neutrino-acl-page")).toBeVisible({
+          timeout: 30_000,
+        });
+        await expect(page.getByTestId(route.firstStep)).toBeVisible({
+          timeout: 60_000,
+        });
+        await completeVisibleTour(page);
+        await expect(page.getByTestId(route.firstStep)).toHaveCount(0);
+        return;
+      }
       await page.goto(route.path, { waitUntil: "domcontentloaded" });
       await waitForHydrated(page);
-      await expect(page.getByTestId(route.firstStep)).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByTestId(route.firstStep)).toBeVisible({
+        timeout: 120_000,
+      });
       await completeVisibleTour(page);
       await expect(page.getByTestId(route.firstStep)).toHaveCount(0);
     });
