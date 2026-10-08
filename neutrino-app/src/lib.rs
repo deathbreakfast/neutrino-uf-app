@@ -212,6 +212,7 @@ uf_app! {
     version: "0.1.0",
     routes: NeutrinoRoutes,
     route_path: "/secrets",
+    repository: "https://github.com/unified-field-dev/neutrino-uf-app",
     permission_manifest: permissions::NeutrinoPermission,
 }
 
