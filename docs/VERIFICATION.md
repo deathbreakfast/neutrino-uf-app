@@ -16,7 +16,7 @@ Toolchain: **nightly-2026-08-07**. Global env includes `RUSTFLAGS=-D warnings`.
 | test | `cargo check` + `cargo test -p neutrino-app --features ssr` below |
 | docs | `RUSTDOCFLAGS="-D rustdoc::broken-intra-doc-links" cargo doc -p neutrino-app --features ssr --no-deps` |
 | leptos-lints | dylint hydrate on `neutrino-app` (`nightly-2025-05-14`) |
-| e2e | `cargo leptos end-to-end --project neutrino-uf-app-e2e` |
+| e2e | `cd neutrino-uf-app-e2e/end2end && LANES=4 ./run-lanes.sh` |
 
 ## Environment
 
