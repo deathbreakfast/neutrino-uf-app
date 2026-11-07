@@ -376,9 +376,17 @@ pub async fn init_e2e_valence() {
     let _ = E2E_STATE.set(state);
 }
 
+/// The request actor for a seeded user. An audit label would be downgraded to
+/// Anonymous on the System handle, so derive it from a handle acting as the user.
+fn seed_actor(system: &Valence, user_id: &str) -> RequestActor {
+    RequestActor::from_valence(&system.with_actor(Actor::User {
+        user_id: user_id.to_string(),
+    }))
+    .expect("seeded user is a valid request actor")
+}
+
 async fn bootstrap_fixtures(system: &Valence) -> anyhow::Result<FixtureIds> {
-    let admin_store =
-        store_from_valence_for_request(system.clone(), RequestActor::audit_label("user:admin"));
+    let admin_store = store_from_valence_for_request(system.clone(), seed_actor(system, "admin"));
     let admin_row = create_vault_secret(
         &admin_store,
         "e2e-admin-seed".into(),
@@ -390,7 +398,7 @@ async fn bootstrap_fixtures(system: &Valence) -> anyhow::Result<FixtureIds> {
     .await?;
 
     let outsider_store =
-        store_from_valence_for_request(system.clone(), RequestActor::audit_label("user:outsider"));
+        store_from_valence_for_request(system.clone(), seed_actor(system, "outsider"));
     let outsider_row = create_vault_secret(
         &outsider_store,
         "e2e-outsider-seed".into(),
