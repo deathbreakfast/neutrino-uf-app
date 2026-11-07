@@ -203,11 +203,11 @@ mod tests {
 
 #[cfg(feature = "ssr")]
 fn store_for_request(
-    ctx: &higgs::Higgs,
     session_v: valence::Valence,
-) -> neutrino::ValenceSealedStore {
-    let actor = actor_owner_label(ctx.actor());
-    neutrino::store_from_valence_for_request(session_v, actor)
+) -> Result<neutrino::ValenceSealedStore, ServerFnError> {
+    let actor = neutrino::RequestActor::from_valence(&session_v)
+        .ok_or_else(|| ServerFnError::new("Vault access requires a signed-in user"))?;
+    Ok(neutrino::store_from_valence_for_request(session_v, actor))
 }
 
 /// Verifies that the sealed store can be reached (RBAC: [`crate::permissions::NeutrinoPermission::SecretsRead`]).
@@ -218,7 +218,7 @@ pub async fn neutrino_vault_ping() -> Result<(), ServerFnError> {
         .await
         .map_err(map_neutrino_error)?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let store = store_for_request(&ctx, session_v);
+    let store = store_for_request(session_v)?;
     neutrino::neutrino_vault_ping(&store)
         .await
         .map_err(map_neutrino_error)
@@ -249,7 +249,7 @@ pub async fn create_vault_secret(
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
     let owner = actor_owner_label(ctx.actor());
-    let store = store_for_request(&ctx, session_v);
+    let store = store_for_request(session_v)?;
     neutrino::create_vault_secret(&store, name, scope_path, kind, plaintext, owner)
         .await
         .map_err(map_neutrino_error)
@@ -282,7 +282,7 @@ pub async fn reveal_vault_secret(
     }
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let store = store_for_request(&ctx, session_v);
+    let store = store_for_request(session_v)?;
     neutrino::reveal_vault_secret(&store, id)
         .await
         .map_err(map_neutrino_error)
@@ -296,7 +296,7 @@ pub async fn delete_vault_secret(
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let store = store_for_request(&ctx, session_v);
+    let store = store_for_request(session_v)?;
     neutrino::delete_vault_secret(&store, id)
         .await
         .map_err(map_neutrino_error)
@@ -313,7 +313,7 @@ pub async fn rotate_vault_secret(
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
     let actor = actor_owner_label(ctx.actor());
-    let store = store_for_request(&ctx, session_v);
+    let store = store_for_request(session_v)?;
     let secret_id = id.clone();
     let row = neutrino::rotate_vault_secret(&store, id, new_plaintext, actor.as_str())
         .await
