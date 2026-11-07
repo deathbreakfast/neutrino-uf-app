@@ -11,8 +11,8 @@ use gauge::service;
 use gauge::super_user::SUPER_USER_GROUP_NAME;
 use gauge::touch_schema_inventory;
 use higgs::{HiggsConfig, HiggsValenceFactory};
-use neutrino::create_initial_neutrino_groups;
 use neutrino::vault::{create_vault_secret, store_from_valence_for_request};
+use neutrino::{create_initial_neutrino_groups, RequestActor};
 use valence::{
     register_backend_logical_names, router_key, Actor, DatabaseBackend, DatabaseRouter, Model,
     RegisterBackendLogicalNamesOptions, RouterValenceFactory, RouterValenceFactoryConfig,
@@ -376,7 +376,8 @@ pub async fn init_e2e_valence() {
 }
 
 async fn bootstrap_fixtures(system: &Valence) -> anyhow::Result<FixtureIds> {
-    let admin_store = store_from_valence_for_request(system.clone(), "user:admin");
+    let admin_store =
+        store_from_valence_for_request(system.clone(), RequestActor::audit_label("user:admin"));
     let admin_row = create_vault_secret(
         &admin_store,
         "e2e-admin-seed".into(),
@@ -387,7 +388,8 @@ async fn bootstrap_fixtures(system: &Valence) -> anyhow::Result<FixtureIds> {
     )
     .await?;
 
-    let outsider_store = store_from_valence_for_request(system.clone(), "user:outsider");
+    let outsider_store =
+        store_from_valence_for_request(system.clone(), RequestActor::audit_label("user:outsider"));
     let outsider_row = create_vault_secret(
         &outsider_store,
         "e2e-outsider-seed".into(),
