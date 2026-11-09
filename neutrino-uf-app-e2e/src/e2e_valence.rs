@@ -13,6 +13,7 @@ use gauge::touch_schema_inventory;
 use higgs::{HiggsConfig, HiggsValenceFactory};
 use neutrino::create_initial_neutrino_groups;
 use neutrino::vault::{create_vault_secret, store_from_valence_for_request};
+use neutrino::RequestActor;
 use valence::{
     register_backend_logical_names, router_key, Actor, DatabaseBackend, DatabaseRouter, Model,
     RegisterBackendLogicalNamesOptions, RouterValenceFactory, RouterValenceFactoryConfig,
@@ -375,8 +376,17 @@ pub async fn init_e2e_valence() {
     let _ = E2E_STATE.set(state);
 }
 
+/// The request actor for a seeded user. An audit label would be downgraded to
+/// Anonymous on the System handle, so derive it from a handle acting as the user.
+fn seed_actor(system: &Valence, user_id: &str) -> anyhow::Result<RequestActor> {
+    RequestActor::from_valence(&system.with_actor(Actor::User {
+        user_id: user_id.to_string(),
+    }))
+    .ok_or_else(|| anyhow::anyhow!("seeded user {user_id} is not a valid request actor"))
+}
+
 async fn bootstrap_fixtures(system: &Valence) -> anyhow::Result<FixtureIds> {
-    let admin_store = store_from_valence_for_request(system.clone(), "user:admin");
+    let admin_store = store_from_valence_for_request(system.clone(), seed_actor(system, "admin")?);
     let admin_row = create_vault_secret(
         &admin_store,
         "e2e-admin-seed".into(),
@@ -387,7 +397,8 @@ async fn bootstrap_fixtures(system: &Valence) -> anyhow::Result<FixtureIds> {
     )
     .await?;
 
-    let outsider_store = store_from_valence_for_request(system.clone(), "user:outsider");
+    let outsider_store =
+        store_from_valence_for_request(system.clone(), seed_actor(system, "outsider")?);
     let outsider_row = create_vault_secret(
         &outsider_store,
         "e2e-outsider-seed".into(),
