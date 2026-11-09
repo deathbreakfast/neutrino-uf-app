@@ -1,20 +1,32 @@
-//! Per-secret ACL management: list, grant, and revoke Gauge action grants.
+//! Per-secret ACL management: list, grant, and revoke Gauge action grants for people
+//! and service users.
 
+use lepton_shell::people::{PersonPicker, PickedPrincipal, PrincipalKind};
 use leptos::prelude::*;
 use uf_product::components::{
     Caption1, ContentContainer, EmptyState, MessageBar, MessageBarIntent, SpacingSize, Title3,
 };
 use uf_product::primitives::{
-    Button, ButtonAppearance, Field, Flex, FlexAlign, FlexJustify, Input, Select, SelectAppearance,
+    Button, ButtonAppearance, Field, Flex, FlexAlign, FlexJustify, Select, SelectAppearance,
 };
 
 use crate::pages::step_up::{spawn_with_fresh_totp, spawn_with_step_up};
 use crate::server::{
     grant_secret_action, list_secret_grants, list_vault_secrets, revoke_secret_action,
-    SecretActionGrant, VaultSecretRow,
+    GrantPrincipalKind, SecretActionGrant, VaultSecretRow,
 };
 
 const SECRET_ACTIONS: &[&str] = &["View", "Reveal", "Edit", "Delete", "Maintain"];
+
+/// The id and kind to send for a pick, or `None` for a kind secrets can't be granted to.
+fn grant_target(pick: &PickedPrincipal) -> Option<(String, GrantPrincipalKind)> {
+    let kind = match pick.kind {
+        PrincipalKind::User => GrantPrincipalKind::User,
+        PrincipalKind::ServiceUser => GrantPrincipalKind::ServiceUser,
+        PrincipalKind::Team | PrincipalKind::Extra(_) => return None,
+    };
+    Some((pick.id.clone(), kind))
+}
 
 fn action_needs_fresh_code(action: &str) -> bool {
     action == "Reveal" || action == "Maintain"
@@ -25,7 +37,7 @@ fn action_needs_fresh_code(action: &str) -> bool {
 #[allow(clippy::too_many_lines)]
 pub fn AclManagePage() -> impl IntoView {
     let selected_secret_id = RwSignal::new(Option::<String>::None);
-    let grant_user_id = RwSignal::new(String::new());
+    let picked = RwSignal::new(Vec::<PickedPrincipal>::new());
     let grant_action = RwSignal::new("View".to_string());
     let page_error = RwSignal::new(Option::<String>::None);
     let grant_submitting = RwSignal::new(false);
@@ -73,11 +85,14 @@ pub fn AclManagePage() -> impl IntoView {
             page_error.set(Some("Pick a secret first.".into()));
             return;
         };
-        let user_id = grant_user_id.get_untracked();
-        if user_id.trim().is_empty() {
-            page_error.set(Some("Enter a user id.".into()));
+        let Some((user_id, kind)) = picked
+            .with_untracked(|p| p.first().cloned())
+            .as_ref()
+            .and_then(grant_target)
+        else {
+            page_error.set(Some("Pick a person or service user.".into()));
             return;
-        }
+        };
         let action = grant_action.get_untracked();
         page_error.set(None);
         grant_submitting.set(true);
@@ -85,7 +100,7 @@ pub fn AclManagePage() -> impl IntoView {
 
         let finish_ok = Callback::new(move |()| {
             grant_submitting.set(false);
-            grant_user_id.set(String::new());
+            picked.set(Vec::new());
             refresh_grants();
         });
 
@@ -93,7 +108,16 @@ pub fn AclManagePage() -> impl IntoView {
             let secret_id = secret_id.clone();
             let user_id = user_id.clone();
             let action = action.clone();
-            async move { grant_secret_action(secret_id, user_id, action, totp_code).await }
+            async move {
+                grant_secret_action(
+                    secret_id,
+                    user_id,
+                    kind.as_str().to_string(),
+                    action,
+                    totp_code,
+                )
+                .await
+            }
         };
 
         if needs_fresh {
@@ -105,31 +129,41 @@ pub fn AclManagePage() -> impl IntoView {
         }
     };
 
-    let on_revoke = move |secret_id: String, user_id: String, action: String| {
-        page_error.set(None);
-        revoke_busy.set(Some((user_id.clone(), action.clone())));
-        let needs_fresh = action_needs_fresh_code(&action);
+    let on_revoke =
+        move |secret_id: String, user_id: String, kind: GrantPrincipalKind, action: String| {
+            page_error.set(None);
+            revoke_busy.set(Some((user_id.clone(), action.clone())));
+            let needs_fresh = action_needs_fresh_code(&action);
 
-        let finish_ok = Callback::new(move |()| {
-            revoke_busy.set(None);
-            refresh_grants();
-        });
-
-        let run_revoke = move |totp_code: Option<String>| {
-            let secret_id = secret_id.clone();
-            let user_id = user_id.clone();
-            let action = action.clone();
-            async move { revoke_secret_action(secret_id, user_id, action, totp_code).await }
-        };
-
-        if needs_fresh {
-            spawn_with_fresh_totp(page_error, finish_ok, move |totp_code| {
-                run_revoke(Some(totp_code))
+            let finish_ok = Callback::new(move |()| {
+                revoke_busy.set(None);
+                refresh_grants();
             });
-        } else {
-            spawn_with_step_up(page_error, finish_ok, move || run_revoke(None));
-        }
-    };
+
+            let run_revoke = move |totp_code: Option<String>| {
+                let secret_id = secret_id.clone();
+                let user_id = user_id.clone();
+                let action = action.clone();
+                async move {
+                    revoke_secret_action(
+                        secret_id,
+                        user_id,
+                        kind.as_str().to_string(),
+                        action,
+                        totp_code,
+                    )
+                    .await
+                }
+            };
+
+            if needs_fresh {
+                spawn_with_fresh_totp(page_error, finish_ok, move |totp_code| {
+                    run_revoke(Some(totp_code))
+                });
+            } else {
+                spawn_with_step_up(page_error, finish_ok, move || run_revoke(None));
+            }
+        };
 
     view! {
         <ContentContainer data_testid="neutrino-acl-page">
@@ -209,6 +243,7 @@ pub fn AclManagePage() -> impl IntoView {
                                                 } else {
                                                     row.user_grants.into_iter().map(|grant| {
                                                         let uid = grant.user_id.clone();
+                                                        let kind = grant.kind;
                                                         let uid_for_btn = grant.user_id.clone();
                                                         let action_for_btn = row.action.clone();
                                                         let action_for_disabled = row.action.clone();
@@ -219,7 +254,13 @@ pub fn AclManagePage() -> impl IntoView {
                                                                 justify=FlexJustify::SpaceBetween
                                                                 gap=SpacingSize::Size120.flex_gap()
                                                             >
-                                                                <span>{format!("{} ({})", grant.label, uid)}</span>
+                                                                <span data-testid="acl-grant-row" data-kind=grant.kind.as_str()>
+                                                                    {if kind == GrantPrincipalKind::ServiceUser {
+                                                                        format!("{} (service user)", grant.label)
+                                                                    } else {
+                                                                        format!("{} ({})", grant.label, uid)
+                                                                    }}
+                                                                </span>
                                                                 <Button
                                                                     appearance=ButtonAppearance::Secondary
                                                                     disabled=Signal::derive(move || {
@@ -230,6 +271,7 @@ pub fn AclManagePage() -> impl IntoView {
                                                                         on_revoke(
                                                                             secret_for_btn.clone(),
                                                                             uid.clone(),
+                                                                            kind,
                                                                             action_for_btn.clone(),
                                                                         );
                                                                     }
@@ -249,9 +291,16 @@ pub fn AclManagePage() -> impl IntoView {
                                         <div id="secrets-acl-grant-form">
                                         <Title3>"Add grant"</Title3>
                                         <Flex vertical=true gap=SpacingSize::Size120.flex_gap()>
-                                            <Field label="User id">
-                                                <Input bind=grant_user_id />
-                                            </Field>
+                                            <div id="secrets-acl-grant-principal">
+                                                <PersonPicker
+                                                    value=picked
+                                                    single=true
+                                                    people=true
+                                                    service_users=true
+                                                    label="Person or service user"
+                                                    placeholder="Search by name"
+                                                />
+                                            </div>
                                             <Field label="Action">
                                                 <Select
                                                     bind=grant_action
@@ -297,4 +346,37 @@ fn select_event_value(ev: &leptos::ev::Event) -> String {
         .and_then(|t| t.dyn_into::<web_sys::HtmlSelectElement>().ok())
         .map(|el| el.value())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pick(kind: PrincipalKind) -> PickedPrincipal {
+        PickedPrincipal {
+            kind,
+            id: "abc".into(),
+            label: "Ada".into(),
+            secondary: None,
+            image_url: None,
+        }
+    }
+
+    #[test]
+    fn person_and_service_user_picks_map_to_grant_kinds_happy() {
+        assert_eq!(
+            grant_target(&pick(PrincipalKind::User)),
+            Some(("abc".into(), GrantPrincipalKind::User))
+        );
+        assert_eq!(
+            grant_target(&pick(PrincipalKind::ServiceUser)),
+            Some(("abc".into(), GrantPrincipalKind::ServiceUser))
+        );
+    }
+
+    #[test]
+    fn team_and_extra_picks_have_no_grant_target_sad() {
+        assert_eq!(grant_target(&pick(PrincipalKind::Team)), None);
+        assert_eq!(grant_target(&pick(PrincipalKind::Extra("x".into()))), None);
+    }
 }

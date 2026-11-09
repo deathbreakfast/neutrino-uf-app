@@ -9,6 +9,7 @@ use axum::Router;
 use leptos::config::get_configuration;
 use leptos::prelude::provide_context;
 use leptos_axum::{generate_route_list, LeptosRoutes};
+use neutrino_uf_app_e2e::person_lab::person_lab;
 use neutrino_uf_app_e2e::seed::seed_data;
 use neutrino_uf_app_e2e::{
     e2e_higgs_config, e2e_router, init_e2e_valence, inject_e2e_session_snapshot, shell,
@@ -52,6 +53,7 @@ async fn serve() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/health", get(|| async { axum::http::StatusCode::OK }))
         .route("/api/test/seed-data", post(seed_data))
+        .route("/api/test/person-lab", post(person_lab))
         .nest_service("/pkg", ServeDir::new(pkg_dir))
         .nest_service("/fonts", ServeDir::new(fonts_dir))
         .leptos_routes_with_context(
