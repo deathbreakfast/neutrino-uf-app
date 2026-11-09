@@ -9,11 +9,17 @@ function unique(prefix: string) {
 }
 
 async function openAclPage(page: Page) {
-  await seedAuth(page, "admin");
+  const seeded = await seedAuth(page, "admin");
   await page.goto("/secrets", { waitUntil: "domcontentloaded" });
   await waitForHydrated(page);
   await page.goto("/secrets/acl", { waitUntil: "domcontentloaded" });
   await waitForHydrated(page);
+  // The list can open on a secret the admin can't manage; pick the one they own.
+  const select = page.locator("#secrets-acl-secret-select select");
+  await expect(
+    select.locator(`option[value="${seeded.fixtures.admin_secret_id}"]`),
+  ).toBeAttached({ timeout: 60_000 });
+  await select.selectOption(seeded.fixtures.admin_secret_id);
   await expect(page.getByTestId("secrets-acl-grant-form")).toBeVisible({
     timeout: 60_000,
   });
