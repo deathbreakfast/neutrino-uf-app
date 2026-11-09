@@ -9,6 +9,20 @@ function unique(prefix: string) {
 }
 
 async function openAclPage(page: Page) {
+  const logs: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" || m.type() === "warning") logs.push(`${m.type()}: ${m.text()}`);
+  });
+  page.on("pageerror", (e) => logs.push(`pageerror: ${e.message}`));
+  page.on("requestfailed", (r) => logs.push(`requestfailed: ${r.url()}`));
+  try {
+    return await openAclPageInner(page);
+  } catch (e) {
+    throw new Error(`${String(e)}\n--- page logs ---\n${logs.slice(0, 40).join("\n")}`);
+  }
+}
+
+async function openAclPageInner(page: Page) {
   const seeded = await seedAuth(page, "admin");
   // A full load of /secrets/acl often forges hydrate before the WASM effects run
   // (see help_spotlight.spec.ts), so hydrate on /secrets and client-navigate.
@@ -17,13 +31,13 @@ async function openAclPage(page: Page) {
   await page.getByRole("button", { name: "Expand navigation" }).click();
   await page.getByTestId("nav-secrets-acl").getByRole("link").click();
   await expect(page.getByTestId("neutrino-acl-page")).toBeVisible({
-    timeout: 60_000,
+    timeout: 15_000,
   });
   // The list can open on a secret the admin can't manage; pick the one they own.
   const select = page.locator("#secrets-acl-secret-select select");
   await expect(
     select.locator(`option[value="${seeded.fixtures.admin_secret_id}"]`),
-  ).toBeAttached({ timeout: 60_000 });
+  ).toBeAttached({ timeout: 15_000 });
   await select.selectOption(seeded.fixtures.admin_secret_id);
   await expect(page.getByTestId("secrets-acl-grant-form")).toBeVisible({
     timeout: 60_000,
