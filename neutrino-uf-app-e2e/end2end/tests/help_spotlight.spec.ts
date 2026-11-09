@@ -20,6 +20,8 @@ async function completeVisibleTour(page: Page) {
     }
   }
   await expect(footer).toHaveCount(0, { timeout: 30_000 });
+  // Progress saves to the server in the background; let it land before the next navigation.
+  await page.waitForLoadState("networkidle");
 }
 
 const NEUTRINO_TOUR_ROUTES = [
@@ -59,10 +61,12 @@ test.describe("help-spotlight", () => {
         // ACL so HelpTourPlayer keeps the live WASM runtime.
         await page.goto("/secrets", { waitUntil: "domcontentloaded" });
         await waitForHydrated(page);
-        await expect(page.getByTestId("help-step-secrets-intro")).toBeVisible({
-          timeout: 120_000,
-        });
-        await completeVisibleTour(page);
+        // Tour progress is saved per user, so an earlier /secrets test can leave
+        // this visit mid-tour (or finished). Finish whatever is showing.
+        const footer = page.locator('[data-testid="spotlight-footer"]:visible');
+        if (await footer.waitFor({ timeout: 30_000 }).then(() => true, () => false)) {
+          await completeVisibleTour(page);
+        }
         await page.getByRole("button", { name: "Expand navigation" }).click();
         await page.getByTestId("nav-secrets-acl").getByRole("link").click();
         await expect(page.getByTestId("neutrino-acl-page")).toBeVisible({
