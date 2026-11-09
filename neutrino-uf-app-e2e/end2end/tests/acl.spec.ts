@@ -51,16 +51,14 @@ async function seedPerson(page: Page, display_name: string) {
   expect(res.ok()).toBeTruthy();
 }
 
+/** Gauge lists a service user by its handle, so the specs look rows up by it. */
 async function seedServiceUser(page: Page, display_name: string) {
+  const handle = unique("bot-");
   const res = await page.request.post("/api/test/person-lab", {
-    data: {
-      action: "service_user",
-      owner: "admin",
-      handle: unique("bot-"),
-      display_name,
-    },
+    data: { action: "service_user", owner: "admin", handle, display_name },
   });
   expect(res.ok()).toBeTruthy();
+  return handle;
 }
 
 /** Type into the picker and click the row whose name matches. */
@@ -116,10 +114,10 @@ test.describe("pw-vault-acl", () => {
   test("pw-vault-acl-grant-service-user-happy", async ({ page }) => {
     const name = `Deploy ${unique("bot")}`;
     await openAclPage(page);
-    await seedServiceUser(page, name);
+    const handle = await seedServiceUser(page, name);
     await pickByName(page, "Deploy", name);
     await grantView(page);
-    const row = viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: name });
+    const row = viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: handle });
     await expect(row).toBeVisible({ timeout: 60_000 });
     await expect(row).toHaveAttribute("data-kind", "service_user");
   });
@@ -129,22 +127,27 @@ test.describe("pw-vault-acl", () => {
     const bot = `Revoke ${unique("Bot")}`;
     await openAclPage(page);
     await seedPerson(page, person);
-    await seedServiceUser(page, bot);
-    for (const name of [person, bot]) {
+    const handle = await seedServiceUser(page, bot);
+    // [name to pick, text the grants list shows for that row]
+    const targets: [string, string][] = [
+      [person, person],
+      [bot, handle],
+    ];
+    for (const [name, shown] of targets) {
       await pickByName(page, "Revoke", name);
       await grantView(page);
       await expect(
-        viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: name }),
+        viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: shown }),
       ).toBeVisible({ timeout: 60_000 });
     }
-    for (const name of [person, bot]) {
+    for (const [, shown] of targets) {
       const row = viewGrants(page)
         .locator("div")
-        .filter({ has: page.getByTestId("acl-grant-row").filter({ hasText: name }) })
+        .filter({ has: page.getByTestId("acl-grant-row").filter({ hasText: shown }) })
         .last();
       await row.getByRole("button", { name: "Revoke" }).click();
       await expect(
-        viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: name }),
+        viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: shown }),
       ).toHaveCount(0, { timeout: 60_000 });
     }
   });
@@ -163,11 +166,14 @@ test.describe("pw-vault-acl", () => {
     await openAclPage(page);
     const input = page.getByPlaceholder(PICKER_PLACEHOLDER);
     await input.fill("G");
-    await page.waitForTimeout(800);
-    await expect(page.getByRole("option")).toHaveCount(0);
+    await page.waitForTimeout(600);
+    // Native selects also expose options; the picker's list is the listbox.
+    const pickable = page.getByRole("listbox").getByRole("option", { disabled: false });
+    await expect(pickable).toHaveCount(0);
     await input.fill("Zzqxnobody");
-    await page.waitForTimeout(800);
-    await expect(page.getByRole("option")).toHaveCount(0);
+    await page.waitForTimeout(600);
+    await expect(pickable).toHaveCount(0);
+    await expect(page.getByRole("listbox").getByText("No one matches.")).toBeVisible();
     const before = await viewGrants(page).getByTestId("acl-grant-row").count();
     await grantView(page);
     await expect(viewGrants(page).getByTestId("acl-grant-row")).toHaveCount(before);
