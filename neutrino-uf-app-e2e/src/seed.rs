@@ -27,6 +27,9 @@ pub struct SeedRequest {
     /// When true, put admin back on Super User so break-glass reveal can succeed.
     #[serde(default)]
     pub promote_super_user: Option<bool>,
+    /// Clear the seeded user's saved Help tour visits so the tour shows again.
+    #[serde(default)]
+    pub help_tour: bool,
 }
 
 fn default_auth() -> String {
@@ -153,6 +156,48 @@ async fn write_step_up_window(
     Ok(())
 }
 
+/// Hard-delete the user's Help tour visit rows. Finishing a tour persists
+/// server-side, so each spec that expects a first-visit tour starts clean.
+async fn wipe_help_tour_visits(user_id: &str) {
+    use uf_product::generated::HelpTourStepVisit;
+
+    const TABLE: &str = "help_tour_step_visit";
+    let system = crate::e2e_valence::e2e_system_valence();
+    let owner = system.with_actor(valence::Actor::User {
+        user_id: user_id.to_string(),
+    });
+    let recipient = valence::RecordId::new("user", user_id);
+    let rows = match HelpTourStepVisit::query(&owner, valence::use_!(r"**Test:** Fixture **Help Tour Step Visit** list for `seed` so the suite can reset tour progress between specs. CI and developers running the suite only."))
+        .where_user(valence::RecordPredicate::Equals(recipient))
+        .limit(500)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(err) => {
+            log::warn!("e2e seed: help tour visit query failed: {err}");
+            return;
+        }
+    };
+    let Ok(backend) = system.backend_for_table(TABLE) else {
+        log::warn!("e2e seed: no backend for {TABLE}");
+        return;
+    };
+    for row in &rows {
+        let Some(thing) = row.id() else { continue };
+        let full = thing.to_string();
+        let bare = full
+            .split(':')
+            .next_back()
+            .unwrap_or(&full)
+            .trim_matches(|c| c == '\u{27e8}' || c == '\u{27e9}')
+            .to_string();
+        match valence::delete_record(backend.as_ref(), TABLE, &bare, valence::use_!(r"**Test:** Fixture Help tour visit hard-delete for `seed` so the suite can reset tour progress between specs. CI and developers running the suite only.")).await {
+            Ok(()) | Err(valence::Error::NotFound(_)) => valence::read_cache::invalidate(TABLE, &bare),
+            Err(err) => log::warn!("e2e seed: help tour visit delete {bare} failed: {err}"),
+        }
+    }
+}
+
 pub async fn seed_data(
     session: tower_sessions::Session,
     Json(body): Json<SeedRequest>,
@@ -163,6 +208,12 @@ pub async fn seed_data(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     clear_step_up_window(&session).await;
+
+    if body.help_tour {
+        if let Some(uid) = kind.bare_user_id() {
+            wipe_help_tour_visits(uid).await;
+        }
+    }
 
     let window_kind = resolve_window_kind(&body, kind);
     let mut step_up_window = "none";

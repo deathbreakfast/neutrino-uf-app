@@ -226,7 +226,7 @@ export async function seedAuth(
     [helpTour, NEUTRINO_HELP_STEPS_SEEN] as const,
   );
 
-  const data: Record<string, unknown> = { auth };
+  const data: Record<string, unknown> = { auth, help_tour: helpTour };
   if (opts?.step_up_window !== undefined) {
     data.step_up_window = opts.step_up_window;
   } else if (opts?.grant_step_up_window !== undefined) {
