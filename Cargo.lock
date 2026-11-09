@@ -1361,7 +1361,7 @@ dependencies = [
 [[package]]
 name = "gauge"
 version = "0.1.0"
-source = "git+https://github.com/unified-field-dev/gauge?branch=main#5baebe50b8d2a8b2b4e2b8e6ca175fd7a70ba85d"
+source = "git+https://github.com/unified-field-dev/gauge?branch=main#78b38aecaddd91dc4386585a0b2e7355a94078e7"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5707,7 +5707,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 [[package]]
 name = "uf-appearance"
 version = "0.3.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "icondata",
  "inventory",
@@ -5719,7 +5719,7 @@ dependencies = [
 [[package]]
 name = "uf-help"
 version = "0.3.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5731,6 +5731,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "tracing",
  "uf-help-macros",
  "uf-product",
  "uf-product-macros",
@@ -5742,7 +5743,7 @@ dependencies = [
 [[package]]
 name = "uf-help-macros"
 version = "0.3.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -5753,7 +5754,7 @@ dependencies = [
 [[package]]
 name = "uf-integrations"
 version = "0.3.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "icondata",
  "inventory",
@@ -5766,6 +5767,7 @@ dependencies = [
  "orbital-primitives",
  "orbital-shell",
  "orbital-theme",
+ "tracing",
  "turf",
  "uf-appearance",
  "uf-help",
@@ -5778,7 +5780,7 @@ dependencies = [
 [[package]]
 name = "uf-notifications-core"
 version = "0.3.0"
-source = "git+https://github.com/unified-field-dev/uf-notifications?branch=main#3e363f4bec39b3ed391ecdf51e7a65d977553ed6"
+source = "git+https://github.com/unified-field-dev/uf-notifications?branch=main#93ce667d9e62af69d522b4f25ad3ff2a1a44dcb0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -5819,7 +5821,7 @@ dependencies = [
 [[package]]
 name = "uf-product"
 version = "0.3.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5856,7 +5858,7 @@ dependencies = [
 [[package]]
 name = "uf-product-macros"
 version = "0.1.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -5884,7 +5886,7 @@ dependencies = [
 [[package]]
 name = "uf-search-core"
 version = "0.1.0"
-source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#e48fccb56c08f4a597e32e1cd39836c106d8c9b9"
+source = "git+https://github.com/unified-field-dev/unified-field-product?branch=main#54b5e1b952f4390186c992c979106674e098c983"
 dependencies = [
  "anyhow",
  "serde",
