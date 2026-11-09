@@ -73,7 +73,7 @@ pub fn SecretsAclSecretSelectHelp() -> impl IntoView {
 pub fn SecretsAclGrantFormHelp() -> impl IntoView {
     help_stack(
         "help-step-secrets-acl-grant-form",
-        "After you pick a secret, enter a user id and an action. Reveal and Maintain ask for a fresh authenticator code.",
+        "After you pick a secret, search for a person or service user and choose an action. Reveal and Maintain ask for a fresh authenticator code.",
         None,
         &[],
     )

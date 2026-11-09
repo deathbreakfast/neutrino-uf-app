@@ -24,7 +24,12 @@ gauge = { workspace = true, default-features = false, optional = true }
 higgs = { workspace = true, optional = true }
 higgs-identity = { workspace = true, optional = true }
 icondata = { workspace = true }
+inventory = { version = "0.3", optional = true }
 lepton = { workspace = true, optional = true }
+axum-login = { version = "0.18", optional = true }
+lepton-host-adapter = { workspace = true, optional = true, default-features = false, features = ["ssr", "db-sqlite"] }
+lepton-identity = { workspace = true, optional = true, default-features = false, features = ["db-sqlite"] }
+lepton-shell = { workspace = true, optional = true, default-features = false }
 leptos = { workspace = true }
 leptos_axum = { workspace = true, optional = true, default-features = true }
 leptos_meta = { workspace = true }
@@ -42,6 +47,8 @@ any_spawner = { version = "0.3", features = ["tokio"], optional = true }
 uf-integrations = { workspace = true, default-features = false }
 uf-product = { workspace = true, default-features = false }
 uf-help = { workspace = true, default-features = false }
+uf-product-macros = { workspace = true, optional = true }
+uf-search-core = { workspace = true, default-features = false, optional = true }
 valence = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
@@ -90,6 +97,15 @@ ssr = [
     "gauge/ssr",
     "dep:lepton",
     "lepton/ssr",
+    "dep:inventory",
+    "dep:axum-login",
+    "dep:lepton-host-adapter",
+    "dep:lepton-identity",
+    "dep:lepton-shell",
+    "lepton-shell/ssr",
+    "dep:uf-product-macros",
+    "dep:uf-search-core",
+    "uf-search-core/ssr",
     "dep:neutrino",
     "neutrino/ssr",
 ]

@@ -198,11 +198,43 @@ async fn wipe_help_tour_visits(user_id: &str) {
     }
 }
 
+/// Mirror the harness user into axum-login, which Lepton's server fns (the person
+/// picker's search) read.
+async fn sync_auth_login(
+    auth: &mut axum_login::AuthSession<lepton_host_adapter::Backend>,
+    kind: E2eAuthKind,
+) -> Result<(), StatusCode> {
+    use axum_login::AuthnBackend;
+
+    let Some(uid) = kind.bare_user_id() else {
+        auth.logout()
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        return Ok(());
+    };
+    let user = auth
+        .backend
+        .get_user(&uid.to_string())
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    // A harness user with no Lepton row stays signed in for the harness only.
+    let Some(user) = user else {
+        log::warn!("e2e seed: no Lepton user row for {uid}; skipping axum-login");
+        return Ok(());
+    };
+    auth.login(&user)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(())
+}
+
 pub async fn seed_data(
     session: tower_sessions::Session,
+    mut auth: axum_login::AuthSession<lepton_host_adapter::Backend>,
     Json(body): Json<SeedRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let kind = E2eAuthKind::parse(&body.auth);
+    sync_auth_login(&mut auth, kind).await?;
     write_e2e_auth_kind(&session, kind)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
