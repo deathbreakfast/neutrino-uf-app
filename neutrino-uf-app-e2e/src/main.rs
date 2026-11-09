@@ -49,6 +49,13 @@ async fn serve() -> anyhow::Result<()> {
     let leptos_options_state = leptos_options.clone();
     let higgs = e2e_higgs_config();
     let router = e2e_router();
+    // lepton-shell's person picker signs the caller in through axum-login, so the
+    // harness runs the same layer and `seed-data` logs the seeded user in.
+    let auth_layer = axum_login::AuthManagerLayerBuilder::new(
+        lepton_host_adapter::Backend::new(higgs.valence_factory().clone()),
+        session_layer,
+    )
+    .build();
 
     let app = Router::new()
         .route("/health", get(|| async { axum::http::StatusCode::OK }))
@@ -68,7 +75,7 @@ async fn serve() -> anyhow::Result<()> {
         .fallback(leptos_axum::file_and_error_handler(shell))
         .layer(from_fn(inject_e2e_session_snapshot))
         .layer(Extension(router))
-        .layer(session_layer)
+        .layer(auth_layer)
         .with_state(leptos_options_state);
 
     log::info!("neutrino-uf-app-e2e listening on http://{addr}");
