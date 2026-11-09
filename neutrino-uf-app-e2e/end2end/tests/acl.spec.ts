@@ -10,10 +10,15 @@ function unique(prefix: string) {
 
 async function openAclPage(page: Page) {
   const seeded = await seedAuth(page, "admin");
+  // A full load of /secrets/acl often forges hydrate before the WASM effects run
+  // (see help_spotlight.spec.ts), so hydrate on /secrets and client-navigate.
   await page.goto("/secrets", { waitUntil: "domcontentloaded" });
   await waitForHydrated(page);
-  await page.goto("/secrets/acl", { waitUntil: "domcontentloaded" });
-  await waitForHydrated(page);
+  await page.getByRole("button", { name: "Expand navigation" }).click();
+  await page.getByTestId("nav-secrets-acl").getByRole("link").click();
+  await expect(page.getByTestId("neutrino-acl-page")).toBeVisible({
+    timeout: 60_000,
+  });
   // The list can open on a secret the admin can't manage; pick the one they own.
   const select = page.locator("#secrets-acl-secret-select select");
   await expect(
