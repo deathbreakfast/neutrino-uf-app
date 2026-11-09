@@ -134,7 +134,7 @@ test.describe("pw-vault-acl", () => {
       [bot, handle],
     ];
     for (const [name, shown] of targets) {
-      await pickByName(page, "Revoke", name);
+      await pickByName(page, name, name);
       await grantView(page);
       await expect(
         viewGrants(page).getByTestId("acl-grant-row").filter({ hasText: shown }),
