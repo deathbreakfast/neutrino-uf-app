@@ -108,16 +108,7 @@ pub fn AclManagePage() -> impl IntoView {
             let secret_id = secret_id.clone();
             let user_id = user_id.clone();
             let action = action.clone();
-            async move {
-                grant_secret_action(
-                    secret_id,
-                    user_id,
-                    kind.as_str().to_string(),
-                    action,
-                    totp_code,
-                )
-                .await
-            }
+            async move { grant_secret_action(secret_id, user_id, kind, action, totp_code).await }
         };
 
         if needs_fresh {
@@ -129,41 +120,34 @@ pub fn AclManagePage() -> impl IntoView {
         }
     };
 
-    let on_revoke =
-        move |secret_id: String, user_id: String, kind: GrantPrincipalKind, action: String| {
-            page_error.set(None);
-            revoke_busy.set(Some((user_id.clone(), action.clone())));
-            let needs_fresh = action_needs_fresh_code(&action);
+    let on_revoke = move |secret_id: String,
+                          user_id: String,
+                          kind: GrantPrincipalKind,
+                          action: String| {
+        page_error.set(None);
+        revoke_busy.set(Some((user_id.clone(), action.clone())));
+        let needs_fresh = action_needs_fresh_code(&action);
 
-            let finish_ok = Callback::new(move |()| {
-                revoke_busy.set(None);
-                refresh_grants();
-            });
+        let finish_ok = Callback::new(move |()| {
+            revoke_busy.set(None);
+            refresh_grants();
+        });
 
-            let run_revoke = move |totp_code: Option<String>| {
-                let secret_id = secret_id.clone();
-                let user_id = user_id.clone();
-                let action = action.clone();
-                async move {
-                    revoke_secret_action(
-                        secret_id,
-                        user_id,
-                        kind.as_str().to_string(),
-                        action,
-                        totp_code,
-                    )
-                    .await
-                }
-            };
-
-            if needs_fresh {
-                spawn_with_fresh_totp(page_error, finish_ok, move |totp_code| {
-                    run_revoke(Some(totp_code))
-                });
-            } else {
-                spawn_with_step_up(page_error, finish_ok, move || run_revoke(None));
-            }
+        let run_revoke = move |totp_code: Option<String>| {
+            let secret_id = secret_id.clone();
+            let user_id = user_id.clone();
+            let action = action.clone();
+            async move { revoke_secret_action(secret_id, user_id, kind, action, totp_code).await }
         };
+
+        if needs_fresh {
+            spawn_with_fresh_totp(page_error, finish_ok, move |totp_code| {
+                run_revoke(Some(totp_code))
+            });
+        } else {
+            spawn_with_step_up(page_error, finish_ok, move || run_revoke(None));
+        }
+    };
 
     view! {
         <ContentContainer data_testid="neutrino-acl-page">

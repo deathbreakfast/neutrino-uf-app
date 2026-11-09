@@ -40,27 +40,12 @@ pub enum GrantPrincipalKind {
 }
 
 impl GrantPrincipalKind {
-    /// Wire form sent to [`grant_secret_action`].
+    /// Short key for `data-kind` attributes.
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::User => "user",
             Self::ServiceUser => "service_user",
-        }
-    }
-
-    /// Parse the wire form; anything else is refused.
-    ///
-    /// # Errors
-    ///
-    /// A [`ServerFnError`] naming the unsupported kind.
-    pub fn parse(raw: &str) -> Result<Self, ServerFnError> {
-        match raw.trim() {
-            "user" => Ok(Self::User),
-            "service_user" => Ok(Self::ServiceUser),
-            other => Err(ServerFnError::new(format!(
-                "Secrets can be granted to people or service users, not {other:?}."
-            ))),
         }
     }
 }
@@ -177,18 +162,18 @@ pub async fn list_secret_grants(
 
 /// Grant a person or service user a single action on a secret.
 ///
-/// `principal_kind` is [`GrantPrincipalKind::as_str`] of the picked principal.
+/// `principal_kind` is the kind of the picked principal.
 #[uf_product_macros::server(permission = "SecretsGrantManage", step_up)]
 pub async fn grant_secret_action(
     secret_id: String,
     user_id: String,
-    principal_kind: String,
+    principal_kind: GrantPrincipalKind,
     action: String,
     totp_code: Option<String>,
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let kind = GrantPrincipalKind::parse(&principal_kind)?;
+    let kind = principal_kind;
     let parsed = parse_secret_action(&action)?;
     if action_requires_fresh_step_up(parsed) {
         let code = totp_code.filter(|c| !c.trim().is_empty()).ok_or_else(|| {
@@ -225,13 +210,13 @@ pub async fn grant_secret_action(
 pub async fn revoke_secret_action(
     secret_id: String,
     user_id: String,
-    principal_kind: String,
+    principal_kind: GrantPrincipalKind,
     action: String,
     totp_code: Option<String>,
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
-    let kind = GrantPrincipalKind::parse(&principal_kind)?;
+    let kind = principal_kind;
     let parsed = parse_secret_action(&action)?;
     if action_requires_fresh_step_up(parsed) {
         let code = totp_code.filter(|c| !c.trim().is_empty()).ok_or_else(|| {
@@ -269,20 +254,6 @@ mod tests {
             id: id.to_string(),
             label: "Label".to_string(),
             owner_label: None,
-        }
-    }
-
-    #[test]
-    fn kind_round_trips_for_person_and_service_user_happy() {
-        for kind in [GrantPrincipalKind::User, GrantPrincipalKind::ServiceUser] {
-            assert!(matches!(GrantPrincipalKind::parse(kind.as_str()), Ok(k) if k == kind));
-        }
-    }
-
-    #[test]
-    fn kind_refuses_groups_and_junk_sad() {
-        for raw in ["group", "team", "", "USER"] {
-            assert!(GrantPrincipalKind::parse(raw).is_err(), "{raw:?}");
         }
     }
 

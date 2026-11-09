@@ -9,20 +9,6 @@ function unique(prefix: string) {
 }
 
 async function openAclPage(page: Page) {
-  const logs: string[] = [];
-  page.on("console", (m) => {
-    if (m.type() === "error" || m.type() === "warning") logs.push(`${m.type()}: ${m.text()}`);
-  });
-  page.on("pageerror", (e) => logs.push(`pageerror: ${e.message}`));
-  page.on("requestfailed", (r) => logs.push(`requestfailed: ${r.url()}`));
-  try {
-    return await openAclPageInner(page);
-  } catch (e) {
-    throw new Error(`${String(e)}\n--- page logs ---\n${logs.slice(0, 40).join("\n")}`);
-  }
-}
-
-async function openAclPageInner(page: Page) {
   const seeded = await seedAuth(page, "admin");
   // A full load of /secrets/acl often forges hydrate before the WASM effects run
   // (see help_spotlight.spec.ts), so hydrate on /secrets and client-navigate.
@@ -166,14 +152,15 @@ test.describe("pw-vault-acl", () => {
     await openAclPage(page);
     const input = page.getByPlaceholder(PICKER_PLACEHOLDER);
     await input.fill("G");
-    await page.waitForTimeout(600);
+    const listbox = page.getByRole("listbox");
+    await expect(listbox.getByText("Type 2 or more letters to search.")).toBeVisible();
     // Native selects also expose options; the picker's list is the listbox.
     const pickable = page.getByRole("listbox").getByRole("option", { disabled: false });
     await expect(pickable).toHaveCount(0);
     await input.fill("Zzqxnobody");
-    await page.waitForTimeout(600);
+    // "No one matches." only shows once the search answered ("Searching…" before).
+    await expect(listbox.getByText("No one matches.")).toBeVisible();
     await expect(pickable).toHaveCount(0);
-    await expect(page.getByRole("listbox").getByText("No one matches.")).toBeVisible();
     const before = await viewGrants(page).getByTestId("acl-grant-row").count();
     await grantView(page);
     await expect(viewGrants(page).getByTestId("acl-grant-row")).toHaveCount(before);
