@@ -59,8 +59,8 @@ pub struct RevealedVaultSecret {
 pub(crate) mod grants;
 
 pub use grants::{
-    grant_secret_action, list_secret_grants, revoke_secret_action, SecretActionGrant,
-    SecretGrantPrincipal,
+    grant_secret_action, list_secret_grants, revoke_secret_action, GrantPrincipalKind,
+    SecretActionGrant, SecretGrantPrincipal,
 };
 
 /// Permission names enforced by vault `#[server]` wrappers.

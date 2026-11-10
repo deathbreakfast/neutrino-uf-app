@@ -11,11 +11,23 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: [["list"]],
+  // Chromium only (the one browser CI installs); the phone project uses a
+  // Chromium-based device profile.
+  projects: [
+    {
+      name: "desktop-light",
+      use: { ...devices["Desktop Chrome"], colorScheme: "light" },
+    },
+    {
+      name: "desktop-dark",
+      use: { ...devices["Desktop Chrome"], colorScheme: "dark" },
+    },
+    { name: "phone", use: { ...devices["Pixel 7"] } },
+  ],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3160",
     actionTimeout: 60_000,
     navigationTimeout: 120_000,
-    ...devices["Desktop Chrome"],
     ...(headed
       ? {
           launchOptions: {

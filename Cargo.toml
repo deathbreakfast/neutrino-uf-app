@@ -110,6 +110,8 @@ uf-search-core = { git = "https://github.com/unified-field-dev/unified-field-pro
 uf-help = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main", default-features = false }
 uf-help-macros = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main" }
 uf-product-macros = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main" }
+lepton-host-adapter = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false, features = ["db-sqlite"] }
+lepton-identity = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
 lepton-shell = { git = "https://github.com/unified-field-dev/lepton-uf-app", branch = "main", default-features = false }
 lepton-auth = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
 lepton-auth-ui = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }

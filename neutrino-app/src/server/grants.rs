@@ -10,6 +10,8 @@ use gauge::service;
 #[cfg(feature = "ssr")]
 use gauge::types::{PrincipalKind, PrincipalRefDto};
 #[cfg(feature = "ssr")]
+use lepton_identity::service_users::ServiceUserId;
+#[cfg(feature = "ssr")]
 use neutrino::NEUTRINO_SECRET;
 
 #[cfg(feature = "ssr")]
@@ -28,13 +30,35 @@ pub struct SecretActionGrant {
     pub user_grants: Vec<SecretGrantPrincipal>,
 }
 
-/// A user principal holding a direct grant.
+/// Which kind of principal a grant names.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GrantPrincipalKind {
+    /// A signed-in person.
+    User,
+    /// A Lepton service user.
+    ServiceUser,
+}
+
+impl GrantPrincipalKind {
+    /// Short key for `data-kind` attributes.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::User => "user",
+            Self::ServiceUser => "service_user",
+        }
+    }
+}
+
+/// A person or service user holding a direct grant.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SecretGrantPrincipal {
-    /// Bare user id (without the `user:` prefix).
+    /// Bare principal id (without the `user:` prefix).
     pub user_id: String,
     /// Display label from Gauge (may redact email).
     pub label: String,
+    /// Whether this is a person or a service user.
+    pub kind: GrantPrincipalKind,
 }
 
 #[cfg(feature = "ssr")]
@@ -87,9 +111,11 @@ fn map_grant_service_err(context: &str, err: impl std::fmt::Display) -> ServerFn
 
 #[cfg(feature = "ssr")]
 fn principal_to_grant(principal: PrincipalRefDto) -> Option<SecretGrantPrincipal> {
-    if principal.kind != PrincipalKind::User {
-        return None;
-    }
+    let kind = match principal.kind {
+        PrincipalKind::User => GrantPrincipalKind::User,
+        PrincipalKind::ServiceUser => GrantPrincipalKind::ServiceUser,
+        _ => return None,
+    };
     let user_id = principal
         .id
         .strip_prefix("user:")
@@ -98,6 +124,7 @@ fn principal_to_grant(principal: PrincipalRefDto) -> Option<SecretGrantPrincipal
     Some(SecretGrantPrincipal {
         user_id,
         label: principal.label,
+        kind,
     })
 }
 
@@ -133,16 +160,20 @@ pub async fn list_secret_grants(
     Ok(rows)
 }
 
-/// Grant a user a single action on a secret.
+/// Grant a person or service user a single action on a secret.
+///
+/// `principal_kind` is the kind of the picked principal.
 #[uf_product_macros::server(permission = "SecretsGrantManage", step_up)]
 pub async fn grant_secret_action(
     secret_id: String,
     user_id: String,
+    principal_kind: GrantPrincipalKind,
     action: String,
     totp_code: Option<String>,
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
+    let kind = principal_kind;
     let parsed = parse_secret_action(&action)?;
     if action_requires_fresh_step_up(parsed) {
         let code = totp_code.filter(|c| !c.trim().is_empty()).ok_or_else(|| {
@@ -155,22 +186,37 @@ pub async fn grant_secret_action(
     }
 
     let permission_id = permission_record_id(NEUTRINO_SECRET, &secret_id, parsed);
-    service::grant_permission_to_user(&permission_id, user_id.trim(), &session_v)
-        .await
-        .map_err(|e| map_grant_service_err("grant secret action", e))?;
+    match kind {
+        GrantPrincipalKind::User => {
+            service::grant_permission_to_user(&permission_id, user_id.trim(), &session_v).await
+        }
+        GrantPrincipalKind::ServiceUser => {
+            let service_user = ServiceUserId::parse(user_id.trim())
+                .map_err(|e| ServerFnError::new(e.to_string()))?;
+            service::grant_permission_to_service_user_checked(
+                &permission_id,
+                &service_user,
+                &session_v,
+            )
+            .await
+        }
+    }
+    .map_err(|e| map_grant_service_err("grant secret action", e))?;
     Ok(())
 }
 
-/// Revoke a user's direct grant for one secret action.
+/// Revoke a person's or service user's direct grant for one secret action.
 #[uf_product_macros::server(permission = "SecretsGrantManage", step_up)]
 pub async fn revoke_secret_action(
     secret_id: String,
     user_id: String,
+    principal_kind: GrantPrincipalKind,
     action: String,
     totp_code: Option<String>,
 ) -> Result<(), ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
+    let kind = principal_kind;
     let parsed = parse_secret_action(&action)?;
     if action_requires_fresh_step_up(parsed) {
         let code = totp_code.filter(|c| !c.trim().is_empty()).ok_or_else(|| {
@@ -183,8 +229,51 @@ pub async fn revoke_secret_action(
     }
 
     let permission_id = permission_record_id(NEUTRINO_SECRET, &secret_id, parsed);
-    service::revoke_permission_from_user(&permission_id, user_id.trim(), &session_v)
-        .await
-        .map_err(|e| map_grant_service_err("revoke secret action", e))?;
+    match kind {
+        GrantPrincipalKind::User => {
+            service::revoke_permission_from_user(&permission_id, user_id.trim(), &session_v).await
+        }
+        GrantPrincipalKind::ServiceUser => {
+            let service_user = ServiceUserId::parse(user_id.trim())
+                .map_err(|e| ServerFnError::new(e.to_string()))?;
+            service::revoke_permission_from_service_user(&permission_id, &service_user, &session_v)
+                .await
+        }
+    }
+    .map_err(|e| map_grant_service_err("revoke secret action", e))?;
     Ok(())
+}
+
+#[cfg(all(test, feature = "ssr"))]
+mod tests {
+    use super::*;
+
+    fn dto(kind: PrincipalKind, id: &str) -> PrincipalRefDto {
+        PrincipalRefDto {
+            kind,
+            id: id.to_string(),
+            label: "Label".to_string(),
+            owner_label: None,
+        }
+    }
+
+    #[test]
+    fn grants_list_keeps_people_and_service_users_happy() {
+        let person = principal_to_grant(dto(PrincipalKind::User, "user:abc"));
+        assert_eq!(
+            person,
+            Some(SecretGrantPrincipal {
+                user_id: "abc".into(),
+                label: "Label".into(),
+                kind: GrantPrincipalKind::User,
+            })
+        );
+        let svc = principal_to_grant(dto(PrincipalKind::ServiceUser, "svc-1"));
+        assert_eq!(svc.map(|g| g.kind), Some(GrantPrincipalKind::ServiceUser));
+    }
+
+    #[test]
+    fn grants_list_drops_groups_sad() {
+        assert!(principal_to_grant(dto(PrincipalKind::Group, "g")).is_none());
+    }
 }

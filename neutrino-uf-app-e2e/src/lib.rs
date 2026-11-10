@@ -8,6 +8,8 @@ mod gate_demos;
 mod harness_auth_menu;
 mod neutrino_routes_eager;
 #[cfg(feature = "ssr")]
+pub mod person_lab;
+#[cfg(feature = "ssr")]
 pub mod seed;
 
 #[cfg(feature = "ssr")]
