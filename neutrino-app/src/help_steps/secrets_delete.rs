@@ -46,7 +46,7 @@ pub fn SecretsDeleteConfirmHelp() -> impl IntoView {
     });
     help_stack(
         "help-step-secrets-delete-confirm",
-        "Confirm permanently deletes the secret and its versions. Cancel aborts.",
+        "Type the secret's name, then Delete secret removes it and every version. Cancel keeps it.",
         None,
         &[],
     )

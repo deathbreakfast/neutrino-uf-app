@@ -1,4 +1,4 @@
-//! Orbital shell layout for the Secrets app (`NeutrinoAppLayout`).
+//! Orbital shell layout for the Neutrino app (`NeutrinoAppLayout`).
 //!
 //! Wraps routed pages with the Unified Field app bar, auth menu, and left nav.
 //! Mount via [`crate::NeutrinoVerifiedGuardRouteView`] inside [`crate::NeutrinoRoutes`].
@@ -15,7 +15,7 @@ use uf_product::components::{
 
 use crate::AppMetadata;
 
-/// Shell layout for the Secrets app: app bar + left nav wrapping the routed page [`Outlet`].
+/// Shell layout for the Neutrino app: app bar + left nav wrapping the routed page [`Outlet`].
 #[component]
 pub fn NeutrinoAppLayout() -> impl IntoView {
     let app_name = AppMetadata::name().to_string();
@@ -44,7 +44,7 @@ pub fn NeutrinoAppLayout() -> impl IntoView {
                             <NavigationLink path="/secrets" value="/secrets" icon=icondata::AiKeyOutlined exact=true test_id="nav-secrets">"Secrets"</NavigationLink>
                         </div>
                         <div id="secrets-nav-acl">
-                            <NavigationLink path="/secrets/acl" value="/secrets/acl" icon=icondata::AiTeamOutlined test_id="nav-secrets-acl">"ACLs"</NavigationLink>
+                            <NavigationLink path="/secrets/acl" value="/secrets/acl" icon=icondata::AiTeamOutlined test_id="nav-secrets-acl">"Access"</NavigationLink>
                         </div>
                     </NavigationBody>
                 </Navigation>

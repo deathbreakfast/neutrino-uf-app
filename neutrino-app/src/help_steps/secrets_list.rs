@@ -46,25 +46,6 @@ pub fn SecretsPageTitleHelp() -> impl IntoView {
     )
 }
 
-/// Permission caption under the title.
-#[help_spotlight_step(
-    route = "/secrets",
-    feature_highlight = "secrets-permissions-note",
-    title = "Who can do what",
-    spotlight = "secrets-permissions-note",
-    position = "bottom",
-    order = 30
-)]
-#[component]
-pub fn SecretsPermissionsNoteHelp() -> impl IntoView {
-    help_stack(
-        "help-step-secrets-permissions-note",
-        "Buttons stay visible even when your role cannot use them. The server still checks permission and returns a clear error if Reveal or Rotate is denied.",
-        Some("Seeing the list is separate from reading the secret value."),
-        &[],
-    )
-}
-
 /// Create secret button.
 #[help_spotlight_step(
     route = "/secrets",
@@ -198,11 +179,11 @@ pub fn SecretsNavSecretsHelp() -> impl IntoView {
     )
 }
 
-/// Left-nav ACLs link.
+/// Left-nav Access link.
 #[help_spotlight_step(
     route = "/secrets",
     feature_highlight = "secrets-nav-acl",
-    title = "ACLs in the menu",
+    title = "Access in the menu",
     spotlight = "secrets-nav-acl",
     position = "right",
     order = 250
@@ -211,7 +192,7 @@ pub fn SecretsNavSecretsHelp() -> impl IntoView {
 pub fn SecretsNavAclHelp() -> impl IntoView {
     help_stack(
         "help-step-secrets-nav-acl",
-        "ACLs opens the sharing page where you grant or revoke access per secret. A short tour starts there.",
+        "Access shows who can do what with each secret, and lets you give or remove it. A short tour starts there.",
         Some("Help, then Replay, restarts this page's tour."),
         &[],
     )

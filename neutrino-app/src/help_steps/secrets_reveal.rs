@@ -34,7 +34,7 @@ pub fn SecretsRevealHelp() -> impl IntoView {
 #[help_spotlight_step(
     route = "/secrets",
     feature_highlight = "secrets-reveal-value",
-    title = "Revealed value",
+    title = "The value",
     spotlight = "secrets-reveal-plaintext",
     position = "top",
     order = 170
@@ -46,8 +46,10 @@ pub fn SecretsRevealValueHelp() -> impl IntoView {
     });
     help_stack(
         "help-step-secrets-reveal-value",
-        "After a successful reveal, the value appears here (shown as base64 in this UI). Copy once if you need it, then close so it is not left open.",
-        Some("This tour opens the dialog for teaching only; it does not fetch plaintext by itself."),
+        "The value shows here as text for a minute, then hides. Copy it if you need it.",
+        Some(
+            "This tour opens the dialog for teaching only; it does not fetch plaintext by itself.",
+        ),
         &[],
     )
 }
@@ -56,7 +58,7 @@ pub fn SecretsRevealValueHelp() -> impl IntoView {
 #[help_spotlight_step(
     route = "/secrets",
     feature_highlight = "secrets-reveal-close",
-    title = "Close reveal",
+    title = "Done",
     spotlight = "secrets-reveal-close",
     position = "top",
     order = 180
@@ -68,7 +70,7 @@ pub fn SecretsRevealCloseHelp() -> impl IntoView {
     });
     help_stack(
         "help-step-secrets-reveal-close",
-        "Close clears the reveal dialog so the value is not left on screen.",
+        "Done closes the dialog and clears the value from the screen.",
         None,
         &[],
     )

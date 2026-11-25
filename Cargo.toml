@@ -104,6 +104,7 @@ higgs-identity = { git = "https://github.com/unified-field-dev/higgs", branch = 
 lepton = { git = "https://github.com/unified-field-dev/lepton", branch = "main", default-features = false }
 orbital-macros = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
 orbital-theme = { git = "https://github.com/unified-field-dev/orbital", branch = "main", default-features = false }
+orbital-data = { git = "https://github.com/unified-field-dev/orbital", branch = "main" }
 uf-product = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main", default-features = false }
 uf-integrations = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main", default-features = false }
 uf-search-core = { git = "https://github.com/unified-field-dev/unified-field-product", branch = "main", default-features = false }
