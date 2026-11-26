@@ -16,7 +16,7 @@
 //!   code and `step_up = "fresh"` so a sudo window alone is not enough.
 //!   [Get started](#reveal-with-a-fresh-code).
 //! - **Help spotlight tours** — Route-scoped Orbital spotlights that teach the
-//!   vault list and ACL manage page. Call [`ensure_help_steps_linked`] so inventory
+//!   vault list and Access page. Call [`ensure_help_steps_linked`] so inventory
 //!   links into the host; enable `offering-help` on the product shell.
 //!   [Get started](#help-spotlight-tours).
 //!
@@ -30,7 +30,8 @@
 //! | Module | Role |
 //! |--------|------|
 //! | [`layout`] | Orbital shell (app bar + nav) wrapping routed pages |
-//! | [`pages`] | Vault list and ACL manage route pages |
+//! | [`pages`] | Vault list and Access route pages |
+//! | [`components`] | Error bar and "What Neutrino keeps" notice shared by the pages |
 //! | [`mod@help_steps`] | Help spotlight tour inventory; call [`ensure_help_steps_linked`] |
 //! | [`mod@server`] | Higgs `#[server]` wrappers over `neutrino::vault` |
 //! | [`permissions`] | `Secrets*` permission manifest for host registration |
@@ -45,8 +46,8 @@
 //!
 //! ## Mount Neutrino routes
 //!
-//! [`NeutrinoRoutes`] is the Orbital route tree for the Secrets app: vault list and
-//! ACL manage pages nested under an authenticated+verified guard. Mount it
+//! [`NeutrinoRoutes`] is the Orbital route tree for the Neutrino app: vault list and
+//! Access pages nested under an authenticated+verified guard. Mount it
 //! once when building the host Axum/Leptos router at startup, after session chrome
 //! and identity are available. Server functions are gated per-action by
 //! [`permissions::NeutrinoPermission`] (`SecretsRead`, `SecretsReveal`,
@@ -80,7 +81,7 @@
 //! }
 //! ```
 //!
-//! On success `/secrets` resolves to the vault list (ACL manage at
+//! On success `/secrets` resolves to the vault list (Access at
 //! `/secrets/acl`). Without `feature = "ssr"` on the server binary, server fns
 //! do not compile into the host. Without an authenticated verified session, the
 //! guard does not render vault pages (operators see the host login / verify
@@ -133,8 +134,8 @@
 //!
 //! ## Help spotlight tours
 //!
-//! Secrets ships Orbital Help spotlights for the vault list (`/secrets`) and ACL
-//! manage page (`/secrets/acl`). Hosts that enable `offering-help` (or `full`) mount
+//! Neutrino ships Orbital Help spotlights for the vault list (`/secrets`) and the
+//! Access page (`/secrets/acl`). Hosts that enable `offering-help` (or `full`) mount
 //! `HelpTourPlayer`. Call [`ensure_help_steps_linked`] once at host startup (when
 //! mounting routes) so `inventory` submissions from [`mod@help_steps`] are retained
 //! and tours can run.
@@ -182,6 +183,8 @@ use leptos_router::{
 };
 use uf_product_macros::uf_app;
 
+/// Error bar and "What Neutrino keeps" notice shared by the pages.
+pub mod components;
 /// Help spotlight tour inventory ([`mod@help_steps`]).
 pub mod help_steps;
 /// Shell layout wrapping routed pages ([`NeutrinoAppLayout`]).
@@ -205,7 +208,7 @@ pub use pages::{AclManagePage, SecretsListPage};
 
 // `uf_app!` expands public const fields on [`AppMetadata`] without per-field docs.
 uf_app! {
-    name: "Secrets",
+    name: "Neutrino",
     id: "secrets",
     description: "Encrypted secret vault (Neutrino)",
     icon: "🔐",
@@ -216,7 +219,7 @@ uf_app! {
     permission_manifest: permissions::NeutrinoPermission,
 }
 
-/// Route tree for the Secrets app: vault list and ACL manage pages, nested
+/// Route tree for the Neutrino app: vault list and Access pages, nested
 /// under an authenticated+verified guard.
 // `orbital_routes_extract` emits helper items without docs.
 #[orbital_macros::orbital_routes_extract]

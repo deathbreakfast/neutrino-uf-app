@@ -34,7 +34,7 @@ pub fn SecretsRotateHelp() -> impl IntoView {
 #[help_spotlight_step(
     route = "/secrets",
     feature_highlight = "secrets-rotate-plaintext",
-    title = "New plaintext",
+    title = "New value",
     spotlight = "secrets-rotate-plaintext",
     position = "bottom",
     order = 200
@@ -46,7 +46,7 @@ pub fn SecretsRotatePlaintextHelp() -> impl IntoView {
     });
     help_stack(
         "help-step-secrets-rotate-plaintext",
-        "Enter the replacement secret here. It is hidden like a password until you save the rotation.",
+        "Paste the replacement value here. It stays hidden like a password.",
         None,
         &[],
     )
@@ -68,7 +68,7 @@ pub fn SecretsRotateSubmitHelp() -> impl IntoView {
     });
     help_stack(
         "help-step-secrets-rotate-submit",
-        "Rotate saves the new value when allowed. Cancel next to it closes without saving.",
+        "This stores the new value as the next version. The old version stays in the history, sealed. Cancel closes without saving.",
         None,
         &[],
     )

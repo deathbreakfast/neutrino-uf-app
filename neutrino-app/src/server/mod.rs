@@ -16,7 +16,6 @@
 //! 4. **Audit** — success rows append under the session actor; denials use a System sink.
 
 use leptos::prelude::*;
-#[cfg(not(feature = "ssr"))]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "ssr")]
@@ -57,11 +56,39 @@ pub struct RevealedVaultSecret {
 }
 
 pub(crate) mod grants;
-
 pub use grants::{
-    grant_secret_action, list_secret_grants, revoke_secret_action, GrantPrincipalKind,
-    SecretActionGrant, SecretGrantPrincipal,
+    change_secret_actions, grant_secret_actions, list_secret_grants, revoke_secret_actions,
+    GrantPrincipal, GrantPrincipalKind, SecretActionGrant, SecretGrantPrincipal,
 };
+
+/// Leading tags on server-fn error text, so the pages can explain a failure
+/// without showing the raw message. [`crate::components::error_copy`] reads them.
+pub mod error_tags {
+    /// The secret (or Gauge permission) doesn't exist, or the caller can't see it.
+    pub const NOT_FOUND: &str = "not_found::";
+    /// Per-secret Gauge check refused the caller.
+    pub const ACCESS_DENIED: &str = "access_denied::";
+    /// A form value was rejected; the rest of the text is a sentence for people.
+    pub const INVALID_INPUT: &str = "invalid_input::";
+    /// The secret is in a state that doesn't allow the action.
+    pub const INVALID_STATE: &str = "invalid_state::";
+    /// Something failed inside the vault; details are in the server log only.
+    pub const VAULT_INTERNAL: &str = "vault_internal::";
+    /// Gauge didn't save a change; details are in the server log only.
+    pub const GAUGE_FAILED: &str = "gauge_failed::";
+    /// No signed-in user on the request.
+    pub const SIGN_IN_REQUIRED: &str = "sign_in_required::";
+}
+
+/// What [`rotate_vault_secret`] saved, and whether Nucleus was told about it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RotateOutcome {
+    /// The version the rotate stored (now the current one).
+    pub version: i64,
+    /// Set when the version saved but the `neutrino.secret.rotated` notice to
+    /// Nucleus failed. [`renotify_rotated_secret`] sends it again.
+    pub notify_error: Option<String>,
+}
 
 /// Permission names enforced by vault `#[server]` wrappers.
 #[cfg(feature = "ssr")]
@@ -77,14 +104,18 @@ pub mod vault_permissions {
 
     /// All vault server-fn permission names.
     pub const ALL: &[&str] = &[SECRETS_READ, SECRETS_REVEAL, SECRETS_WRITE, SECRETS_ROTATE];
+    /// Names a caller may ask for through [`super::request_neutrino_permission`].
+    pub const REQUESTABLE: &[&str] = &[SECRETS_REVEAL, SECRETS_WRITE, SECRETS_ROTATE];
 }
 
 #[cfg(feature = "ssr")]
 pub(crate) fn session_valence_from_ctx(
     ctx: &higgs::Higgs,
 ) -> Result<valence::Valence, ServerFnError> {
-    ctx.valence()
-        .map_err(|e| ServerFnError::new(format!("Failed to build request Valence: {e}")))
+    ctx.valence().map_err(|e| {
+        tracing::warn!(target: "neutrino_app", error = %e, "failed to build request Valence");
+        ServerFnError::new(INTERNAL_VAULT_ERROR)
+    })
 }
 
 // `Actor` only resolves when `valence` is enabled (via this crate's own `ssr`
@@ -114,21 +145,23 @@ fn actor_owner_label(actor: Actor) -> String {
 
 /// Client-safe message when domain failures must not leak internal detail.
 #[cfg(feature = "ssr")]
-const INTERNAL_VAULT_ERROR: &str = "An internal vault error occurred. Check server logs.";
+const INTERNAL_VAULT_ERROR: &str =
+    "vault_internal::An internal vault error occurred. Check server logs.";
 
 #[cfg(feature = "ssr")]
 #[allow(clippy::needless_pass_by_value)] // `map_err(map_neutrino_error)` needs owned Err
 fn map_neutrino_error(err: neutrino::NeutrinoError) -> ServerFnError {
     use neutrino::NeutrinoError;
-    match &err {
-        NeutrinoError::NotFound { .. }
-        | NeutrinoError::AccessDenied { .. }
-        | NeutrinoError::Validation { .. }
-        | NeutrinoError::InvalidState { .. } => ServerFnError::new(err.to_string()),
-        NeutrinoError::Config(_)
-        | NeutrinoError::Crypto { .. }
-        | NeutrinoError::Unsupported { .. }
-        | NeutrinoError::Service { .. } => {
+    let tag = match &err {
+        NeutrinoError::NotFound { .. } => Some(error_tags::NOT_FOUND),
+        NeutrinoError::AccessDenied { .. } => Some(error_tags::ACCESS_DENIED),
+        NeutrinoError::Validation { .. } => Some(error_tags::INVALID_INPUT),
+        NeutrinoError::InvalidState { .. } => Some(error_tags::INVALID_STATE),
+        _ => None,
+    };
+    match tag {
+        Some(tag) => ServerFnError::new(format!("{tag}{err}")),
+        None => {
             tracing::warn!(
                 target: "neutrino_app",
                 error = %err,
@@ -141,7 +174,7 @@ fn map_neutrino_error(err: neutrino::NeutrinoError) -> ServerFnError {
 
 #[cfg(all(test, feature = "ssr"))]
 mod tests {
-    use super::{actor_owner_label, map_neutrino_error, INTERNAL_VAULT_ERROR};
+    use super::{actor_owner_label, error_tags, map_neutrino_error, INTERNAL_VAULT_ERROR};
     use neutrino::NeutrinoError;
     use valence::Actor;
 
@@ -171,6 +204,7 @@ mod tests {
     #[test]
     fn map_neutrino_error_passes_client_safe_variants() {
         let not_found = map_neutrino_error(NeutrinoError::NotFound { id: "sid-1".into() });
+        assert!(not_found.to_string().contains(error_tags::NOT_FOUND));
         assert!(not_found.to_string().contains("secret not found"));
 
         let denied = map_neutrino_error(NeutrinoError::AccessDenied {
@@ -182,6 +216,7 @@ mod tests {
             field: "Name",
             message: "required".into(),
         });
+        assert!(validation.to_string().contains(error_tags::INVALID_INPUT));
         assert!(validation.to_string().contains("required"));
 
         let invalid = map_neutrino_error(NeutrinoError::InvalidState {
@@ -205,8 +240,12 @@ mod tests {
 fn store_for_request(
     session_v: valence::Valence,
 ) -> Result<neutrino::ValenceSealedStore, ServerFnError> {
-    let actor = neutrino::RequestActor::from_valence(&session_v)
-        .ok_or_else(|| ServerFnError::new("Vault access requires a signed-in user"))?;
+    let actor = neutrino::RequestActor::from_valence(&session_v).ok_or_else(|| {
+        ServerFnError::new(format!(
+            "{}Vault access requires a signed-in user",
+            error_tags::SIGN_IN_REQUIRED
+        ))
+    })?;
     Ok(neutrino::store_from_valence_for_request(session_v, actor))
 }
 
@@ -303,30 +342,120 @@ pub async fn delete_vault_secret(
 }
 
 /// Rotates ciphertext to a new version (publishes Photon event when DB-scoped).
+///
+/// A DB-scoped rotate also tells Nucleus through `neutrino.secret.rotated`. When
+/// that notice fails the new version is still saved, so this returns `Ok` with
+/// [`RotateOutcome::notify_error`] set; [`renotify_rotated_secret`] retries it.
 #[uf_product_macros::server(permission = "SecretsRotate", step_up)]
 pub async fn rotate_vault_secret(
     /// Unique identifier of the secret to rotate.
     id: String,
     /// New plaintext value to seal as the next version.
     new_plaintext: String,
-) -> Result<VaultSecretRow, ServerFnError> {
+) -> Result<RotateOutcome, ServerFnError> {
     let ctx = higgs::Higgs::from_request().await?;
     let session_v = session_valence_from_ctx(&ctx)?;
     let actor = actor_owner_label(ctx.actor());
     let store = store_for_request(session_v)?;
-    let secret_id = id.clone();
     let row = neutrino::rotate_vault_secret(&store, id, new_plaintext, actor.as_str())
         .await
         .map_err(map_neutrino_error)?;
-
-    // Live L4: DB-scoped rotates publish `neutrino.secret.rotated` for Gluon apply.
-    // Non-DB scopes (provider tokens, etc.) stay quiet — no mid-request System elevate.
-    match neutrino::publish_if_db_scoped_secret_rotated(
+    let correlation = format!("vault_rotate:{}:{}", row.id, row.current_version);
+    let notify_error = publish_rotated(
         &row.id,
         row.current_version,
-        None,
         &row.scope_path,
-        format!("vault_rotate:{}:{}", row.id, row.current_version),
+        correlation,
+        "vault rotate",
+    )
+    .await;
+    Ok(RotateOutcome {
+        version: row.current_version,
+        notify_error,
+    })
+}
+
+/// Sends the `neutrino.secret.rotated` notice for the secret's current version
+/// again, after [`rotate_vault_secret`] saved a version but couldn't tell Nucleus.
+///
+/// Same permission and step-up as rotate, plus the per-secret Edit grant.
+/// Non-DB scopes have nothing to send, so they succeed without publishing.
+#[uf_product_macros::server(permission = "SecretsRotate", step_up)]
+pub async fn renotify_rotated_secret(
+    /// Unique identifier of the rotated secret.
+    secret_id: String,
+) -> Result<(), ServerFnError> {
+    let ctx = higgs::Higgs::from_request().await?;
+    let session_v = session_valence_from_ctx(&ctx)?;
+    let allowed = neutrino::actor_can_secret(
+        &session_v,
+        &secret_id,
+        gauge::resource_permissions::ResourceAction::Edit,
+    )
+    .await
+    .map_err(map_neutrino_error)?;
+    if !allowed {
+        return Err(map_neutrino_error(neutrino::NeutrinoError::AccessDenied {
+            operation: "renotify",
+        }));
+    }
+    // One row by id, read under the session Valence (the same privacy rules as the list).
+    let secret = {
+        use valence::Model;
+        neutrino::generated::NeutrinoSecret::get(
+            &secret_id,
+            &session_v,
+            valence::use_!(r"When someone **sends a rotated secret's notice to Nucleus again**, we read that secret's **current version and scope path**, never its value, so the notice names the right version."),
+        )
+        .await
+        .map_err(|e| {
+            tracing::warn!(target: "neutrino_app", error = %e, "renotify secret lookup failed");
+            ServerFnError::new(INTERNAL_VAULT_ERROR)
+        })?
+        .ok_or_else(|| {
+            map_neutrino_error(neutrino::NeutrinoError::NotFound {
+                id: secret_id.clone(),
+            })
+        })?
+    };
+    let version = *secret.current_version();
+    // A fresh correlation: the rotate's own one may already be spent on the failed try.
+    let correlation = format!(
+        "vault_renotify:{secret_id}:{version}:{}",
+        chrono::Utc::now().timestamp_millis()
+    );
+    match publish_rotated(
+        &secret_id,
+        version,
+        secret.scope_path(),
+        correlation,
+        "vault renotify",
+    )
+    .await
+    {
+        None => Ok(()),
+        Some(message) => Err(ServerFnError::new(message)),
+    }
+}
+
+/// Publish `neutrino.secret.rotated` for a DB-scoped row; the client-safe error on failure.
+///
+/// Live L4: DB-scoped rotates publish for Gluon apply. Non-DB scopes (provider
+/// tokens, etc.) stay quiet. No mid-request System elevate.
+#[cfg(feature = "ssr")]
+async fn publish_rotated(
+    secret_id: &str,
+    version: i64,
+    scope_path: &str,
+    correlation: String,
+    operation: &'static str,
+) -> Option<String> {
+    match neutrino::publish_if_db_scoped_secret_rotated(
+        secret_id,
+        version,
+        None,
+        scope_path,
+        correlation,
     )
     .await
     {
@@ -334,29 +463,104 @@ pub async fn rotate_vault_secret(
             tracing::info!(
                 target: "neutrino_app",
                 secret_id = %secret_id,
-                version = row.current_version,
-                "vault rotate published neutrino.secret.rotated"
+                version,
+                operation,
+                "published neutrino.secret.rotated"
             );
+            None
         }
         Ok(false) => {
             tracing::debug!(
                 target: "neutrino_app",
                 secret_id = %secret_id,
-                "vault rotate complete (non-DB scope; Photon publish skipped)"
+                operation,
+                "non-DB scope; Photon publish skipped"
             );
+            None
         }
         Err(e) => {
             tracing::error!(
                 target: "neutrino_app",
                 secret_id = %secret_id,
                 error = %e,
-                "vault rotate succeeded but Photon publish failed"
+                operation,
+                "version saved but Photon publish failed"
             );
-            return Err(ServerFnError::new(format!(
-                "secret rotated but notify failed (DB-scoped apply not queued): {e}"
-            )));
+            Some(format!(
+                "{}Nucleus wasn't told about version {}",
+                error_tags::VAULT_INTERNAL,
+                version
+            ))
         }
     }
+}
 
-    Ok(row)
+/// Asks for one of Neutrino's app-wide permissions through Gauge's request flow.
+///
+/// Whoever reviews Gauge requests for that permission gets it to approve or deny.
+/// Only Neutrino's own permission names are accepted.
+#[uf_product_macros::server(permission = "SecretsRead")]
+pub async fn request_neutrino_permission(
+    /// A `Secrets*` permission name, such as `SecretsWrite`.
+    permission: String,
+) -> Result<(), ServerFnError> {
+    use gauge::types::{PermissionRequestCreateInput, PermissionRequestTargetKind};
+
+    if !vault_permissions::REQUESTABLE.contains(&permission.as_str()) {
+        return Err(ServerFnError::new(format!(
+            "{}Unknown permission {permission}",
+            error_tags::INVALID_INPUT
+        )));
+    }
+    let Some(target_id) = gauge::server::resolve_permission_id_by_name(permission.clone()).await?
+    else {
+        return Err(ServerFnError::new(format!(
+            "{}Permission {permission}",
+            error_tags::NOT_FOUND
+        )));
+    };
+    let ctx = higgs::Higgs::from_request().await?;
+    let session_v = session_valence_from_ctx(&ctx)?;
+    gauge::service::create_permission_request(
+        PermissionRequestCreateInput {
+            target_kind: PermissionRequestTargetKind::Permission,
+            target_id,
+            reason: format!("Requested from Neutrino to use {permission}."),
+            on_behalf_of: None,
+        },
+        &session_v,
+    )
+    .await
+    .map_err(|e| {
+        let message = e.to_string();
+        // Gauge's own refusals ("already pending", "already have") read fine to people.
+        if message.contains("already") {
+            return ServerFnError::new(format!("{}{message}", error_tags::INVALID_STATE));
+        }
+        tracing::warn!(target: "neutrino_app", error = %message, "permission request failed");
+        ServerFnError::new(format!("{}request access", error_tags::GAUGE_FAILED))
+    })?;
+    Ok(())
+}
+
+/// What the caller may do app-wide in Neutrino; the pages show only the buttons that work.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VaultAbilities {
+    /// Holds `SecretsWrite`: may store new secrets.
+    pub can_write: bool,
+}
+
+/// The caller's app-wide Neutrino abilities, from the same Gauge check the
+/// server functions run.
+#[uf_product_macros::server(permission = "SecretsRead")]
+pub async fn get_vault_abilities() -> Result<VaultAbilities, ServerFnError> {
+    let ctx = higgs::Higgs::from_request().await?;
+    let session_v = session_valence_from_ctx(&ctx)?;
+    let can_write = gauge::service::actor_can(&session_v, vault_permissions::SECRETS_WRITE)
+        .await
+        .map_err(|e| {
+            tracing::warn!(target: "neutrino_app", error = %e, "vault abilities check failed");
+            ServerFnError::new(INTERNAL_VAULT_ERROR)
+        })?;
+    Ok(VaultAbilities { can_write })
 }

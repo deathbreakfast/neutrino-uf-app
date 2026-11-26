@@ -3,10 +3,11 @@
 use leptos::prelude::*;
 use uf_product::components::{Card, EmptyState, SkeletonItemSize};
 use uf_product::primitives::{
-    Button, ButtonAppearance, ButtonSize, Flex, FlexGap, MessageBar, MessageBarIntent,
-    SkeletonItem, Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow,
+    Button, ButtonAppearance, ButtonSize, Flex, FlexGap, SkeletonItem, Table, TableBody, TableCell,
+    TableHeader, TableHeaderCell, TableRow,
 };
 
+use crate::components::{error_copy, ErrorCopyBar};
 use crate::server::VaultSecretRow;
 
 #[component]
@@ -195,9 +196,12 @@ pub(super) fn SecretsTable(
                                 <TableBody>
                                     <TableRow>
                                         <TableCell attr:colspan="6">
-                                            <MessageBar intent=MessageBarIntent::Error>
-                                                "Failed to load secrets: " {err.to_string()}
-                                            </MessageBar>
+                                            <div data-testid="neutrino-secrets-load-error">
+                                                <ErrorCopyBar
+                                                    copy=error_copy(&err)
+                                                    on_retry=Callback::new(move |()| secrets.refetch())
+                                                />
+                                            </div>
                                         </TableCell>
                                     </TableRow>
                                 </TableBody>
